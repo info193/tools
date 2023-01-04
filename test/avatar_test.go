@@ -2,8 +2,8 @@ package test
 
 import (
 	"fmt"
+	"github.com/info193/tools/random"
 	"testing"
-	"tools/random"
 )
 
 func TestUrl(t *testing.T) {
