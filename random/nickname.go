@@ -164,7 +164,7 @@ func (l *nickname) Generate() string {
 	case 18:
 		rand.Seed(l.seed + 1)
 		lens := rand.Intn(2)
-		name := "爱喝" + l.food[rand.Intn(len(l.food))] + "的" + l.people[lens][rand.Intn(len(l.people[lens]))]
+		name := "爱喝" + l.drink[rand.Intn(len(l.drink))] + "的" + l.people[lens][rand.Intn(len(l.people[lens]))]
 		return name
 		//  爱喝+饮料，喝+职务 7
 	case 19:
