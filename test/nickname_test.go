@@ -7,7 +7,9 @@ import (
 )
 
 func TestGenerateNickname(t *testing.T) {
-	fmt.Println(random.GenerateNickname(0)) // 随机男或女
-	fmt.Println(random.GenerateNickname(1)) // 男
-	fmt.Println(random.GenerateNickname(2)) // 女
+	fmt.Println(random.BatchShortGenerate(10))
+	fmt.Println(random.BatchGenerate(10))
+	fmt.Println(random.Generate())
+	fmt.Println(random.GenerateShort())
+
 }
