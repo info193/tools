@@ -1,6 +1,6 @@
 package utils
 
-func UniqueString(sli ...[]string) []string {
+func UniqueSliceString(sli ...[]string) []string {
 	dst := make([]string, 0)
 	length := len(sli)
 	for i := 0; i < length; i++ {
@@ -19,7 +19,7 @@ func UniqueString(sli ...[]string) []string {
 	return arr
 }
 
-func UniqueInt(sli ...[]int) []int {
+func UniqueSliceInt(sli ...[]int) []int {
 	dst := make([]int, 0)
 	length := len(sli)
 	for i := 0; i < length; i++ {
@@ -38,7 +38,7 @@ func UniqueInt(sli ...[]int) []int {
 	return arr
 }
 
-func UniqueInt32(sli ...[]int32) []int32 {
+func UniqueSliceInt32(sli ...[]int32) []int32 {
 	dst := make([]int32, 0)
 	length := len(sli)
 	for i := 0; i < length; i++ {
@@ -57,7 +57,7 @@ func UniqueInt32(sli ...[]int32) []int32 {
 	return arr
 }
 
-func UniqueInt64(sli ...[]int64) []int64 {
+func UniqueSliceInt64(sli ...[]int64) []int64 {
 	dst := make([]int64, 0)
 	length := len(sli)
 	for i := 0; i < length; i++ {
@@ -74,4 +74,40 @@ func UniqueInt64(sli ...[]int64) []int64 {
 		arr = append(arr, v)
 	}
 	return arr
+}
+func DeleteSliceInt(a []int, elem int) []int {
+	tgt := a[:0]
+	for _, v := range a {
+		if v != elem {
+			tgt = append(tgt, v)
+		}
+	}
+	return tgt
+}
+func DeleteSliceInt32(a []int32, elem int32) []int32 {
+	tgt := a[:0]
+	for _, v := range a {
+		if v != elem {
+			tgt = append(tgt, v)
+		}
+	}
+	return tgt
+}
+func DeleteSliceInt64(a []int64, elem int64) []int64 {
+	tgt := a[:0]
+	for _, v := range a {
+		if v != elem {
+			tgt = append(tgt, v)
+		}
+	}
+	return tgt
+}
+func DeleteSliceString(a []string, elem string) []string {
+	tgt := a[:0]
+	for _, v := range a {
+		if v != elem {
+			tgt = append(tgt, v)
+		}
+	}
+	return tgt
 }
