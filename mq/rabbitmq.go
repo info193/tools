@@ -65,7 +65,7 @@ func NewRabbitMQ(cfg *RabbitMqConfig) *RabbitMQ {
 		Cfg:       cfg,
 		Consumers: make(map[*BusinessConfig]Handle),
 		Lock:      sync.Mutex{},
-		retryNum:  len(cfg.RetryCnf),
+		retryNum:  len(cfg.RetryCnfs),
 	}
 }
 
@@ -287,8 +287,8 @@ func (r *RabbitMQ) Receiver(b *BusinessConfig, handle Handle) {
 
 			//消息处理失败 进入延时尝试机制
 			if r.retryNum != 0 && retry <= r.retryNum && ok {
-				if len(r.Cfg.RetryCnf) > 0 && retry > 0 && retry-1 < len(r.Cfg.RetryCnf) {
-					retrySecond := r.Cfg.RetryCnf[retry-1]
+				if len(r.Cfg.RetryCnfs) > 0 && retry > 0 && retry-1 < len(r.Cfg.RetryCnfs) {
+					retrySecond := r.Cfg.RetryCnfs[retry-1]
 					r.publishRetry(string(msg.Body), retry, retrySecond, b)
 				}
 
