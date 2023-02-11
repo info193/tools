@@ -7,6 +7,11 @@ import (
 )
 
 func TestUniqueString(t *testing.T) {
+	maps := make(map[string]string, 0)
+	//maps["name"] = "sss"
+	//maps["demo"] = "ddd"
+	fmt.Println(len(maps))
+
 	str := []string{"A", "B", "C", "A", "E", "C"}
 	old := []string{"D", "A", "E", "C"}
 
