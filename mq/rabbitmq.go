@@ -22,7 +22,7 @@ type RabbitMQ struct {
 
 // 链接rabbitMQ
 func (r *RabbitMQ) MqConnect() (err error) {
-	mqConn, err := amqp.DialConfig(r.Cfg.DnsHost, amqp.Config{Vhost: r.Cfg.Vhost, Heartbeat: time.Duration(r.Cfg.Heartbeat) * time.Second})
+	mqConn, err := amqp.DialConfig(r.Cfg.Dns, amqp.Config{Vhost: r.Cfg.Vhost, Heartbeat: time.Duration(r.Cfg.Heartbeat) * time.Second})
 	//mqConn, err = amqp.Dial(r.dns)
 	r.connection = mqConn // 赋值给RabbitMQ对象
 	if err != nil {
@@ -287,11 +287,11 @@ func (r *RabbitMQ) Receiver(b *BusinessConfig, handle Handle) {
 
 			//消息处理失败 进入延时尝试机制
 			if r.retryNum != 0 && retry <= r.retryNum && ok {
-				retrySecond, ok := r.Cfg.RetryCnf[retry]
-				if !ok {
-					retrySecond = 0
+				if len(r.Cfg.RetryCnf) > 0 && retry > 0 && retry-1 < len(r.Cfg.RetryCnf) {
+					retrySecond := r.Cfg.RetryCnf[retry-1]
+					r.publishRetry(string(msg.Body), retry, retrySecond, b)
 				}
-				r.publishRetry(string(msg.Body), retry, retrySecond, b)
+
 			} else {
 				//消息失败 入库db
 				log.Printf("消息处理多次后还是失败了 可以扩展功能写入到 db 或邮件通知")

@@ -38,7 +38,7 @@ func TestRabbitc(t *testing.T) {
 		Dns:       "amqp://rabbit_prod:UsUngiYtaGG5QMqK@192.168.7.73:5672/",
 		Vhost:     "/",
 		Heartbeat: 5,
-		RetryCnf:  map[int]int64{1: 10, 2: 30, 3: 60},
+		RetryCnf:  []int64{10, 30, 60},
 	}
 	rabbit := mq.NewRabbitMQ(conf)
 
