@@ -16,9 +16,8 @@ type NsqConfig struct {
 }
 
 type RabbitMqConfig struct {
-	HostSource string `json:"host_source"`
-	Vhost      string `json:"vhost"`
-	//Retry      int64           `json:"retry"`
+	Dns       string        `json:"dns"`
+	Vhost     string        `json:"vhost"`
 	Heartbeat int64         `json:"heartbeat"`
 	RetryCnf  map[int]int64 `json:"retry_delay"`
 }

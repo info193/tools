@@ -28,12 +28,13 @@ type MqConfig struct {
 	RocketMqAliConfig *RocketMqAliConfig
 	//RocketMqConfig    *RocketMqConfig
 	//NsqConfig         *NsqConfig
+	RabbitMqConfig *RabbitMqConfig
 }
 
 func NewMq(cfg *MqConfig) IMQ {
 	switch cfg.Use {
 	case "RabbitMQ":
-		return NewAsynq(cfg.AsynqConfig)
+		return NewRabbitMQ(cfg.RabbitMqConfig)
 	case "RocketMQAli":
 		return NewRocketAli(cfg.RocketMqAliConfig)
 	case "RocketMQ":

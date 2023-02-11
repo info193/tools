@@ -22,7 +22,7 @@ type RabbitMQ struct {
 
 // 链接rabbitMQ
 func (r *RabbitMQ) MqConnect() (err error) {
-	mqConn, err := amqp.DialConfig(r.Cfg.HostSource, amqp.Config{Vhost: r.Cfg.Vhost, Heartbeat: time.Duration(r.Cfg.Heartbeat) * time.Second})
+	mqConn, err := amqp.DialConfig(r.Cfg.Dns, amqp.Config{Vhost: r.Cfg.Vhost, Heartbeat: time.Duration(r.Cfg.Heartbeat) * time.Second})
 	//mqConn, err = amqp.Dial(r.dns)
 	r.connection = mqConn // 赋值给RabbitMQ对象
 	if err != nil {
@@ -60,8 +60,8 @@ func (r *RabbitMQ) CloseMqChannel() (err error) {
 }
 
 // 创建一个新的操作对象
-func NewRabbit(cfg *RabbitMqConfig) RabbitMQ {
-	return RabbitMQ{
+func NewRabbitMQ(cfg *RabbitMqConfig) *RabbitMQ {
+	return &RabbitMQ{
 		Cfg:       cfg,
 		Consumers: make(map[*BusinessConfig]Handle),
 		Lock:      sync.Mutex{},
