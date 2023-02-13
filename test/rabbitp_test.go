@@ -28,11 +28,24 @@ func TestRabbitp(t *testing.T) {
 	//	Ttl: 60,
 	//})
 
+	//str := "0,20,30"
+	//if str != "" {
+	//	arr := strings.Split(str, ",")
+	//	//array := make([]int64, 0)
+	//	retryCnfs := make(map[int]int64, 0)
+	//	for id, value := range arr {
+	//		num, _ := strconv.ParseInt(value, 10, 64)
+	//		retryCnfs[id] = num
+	//	}
+	//	fmt.Println(retryCnfs, len(retryCnfs))
+	//}
+	//return
+
 	conf := &mq.RabbitMqConfig{
 		Dns:       "amqp://rabbit_prod:UsUngiYtaGG5QMqK@192.168.7.73:5672/",
 		Vhost:     "/",
 		Heartbeat: 5,
-		RetryCnfs: []int64{10, 30, 60},
+		RetryCnfs: "0,20,30", // 第一次重试 0秒，第二次重试 20秒，第三次重试30秒
 	}
 	rabbit := mq.NewRabbitMQ(conf)
 	//b := mq.NewBusiness("test", "direct", "test", "test")
