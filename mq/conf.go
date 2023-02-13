@@ -19,5 +19,5 @@ type RabbitMqConfig struct {
 	Dns       string
 	Vhost     string
 	Heartbeat int64
-	RetryCnfs []int64
+	RetryCnfs []int64 `json:"RetryCnfs,omitempty"
 }
