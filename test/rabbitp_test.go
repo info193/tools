@@ -48,8 +48,8 @@ func TestRabbitp(t *testing.T) {
 		RetryCnfs: "0,20,30", // 第一次重试 0秒，第二次重试 20秒，第三次重试30秒
 	}
 	rabbit := mq.NewRabbitMQ(conf)
-	//b := mq.NewBusiness("test", "direct", "test", "test")
-	b := mq.NewBusiness("demo", "direct", "demo", "demo")
+	b := mq.NewBusiness("test", "direct", "test", "test")
+	//b := mq.NewBusiness("demo", "direct", "demo", "demo")
 
 	err := rabbit.Publish(b, "cesiyixia")
 	fmt.Println(err, "++++++++++++++++")
