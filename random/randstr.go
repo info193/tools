@@ -6,7 +6,7 @@ import (
 )
 
 func RandomStr(n int) string {
-	letters := []byte("aeFfghi7jklnXopqr123stuvwQxy6zABCD8EGbcd5HIJKL9MNOPRmST0UVWYZ4")
+	letters := []byte("aeFfghi7jklnX2opqr13stuvwQxy6zABCD8EGbcd5HIJKL9MNOPRmST0UVWYZ4")
 	rand.Seed(time.Now().UnixNano())
 	str := make([]byte, n)
 	for i := 0; i < n; i++ {
