@@ -30,3 +30,21 @@ func SplitInt64(str string, sep string) []int64 {
 	}
 	return strs
 }
+
+func SplitStr64(str []int64) string {
+	strs := make([]string, 0)
+	for _, split := range str {
+		id := strconv.FormatInt(split, 10)
+		strs = append(strs, id)
+	}
+	return strings.Join(strs, ",")
+}
+
+func SplitStr(str []int) string {
+	strs := make([]string, 0)
+	for _, split := range str {
+		id := strconv.Itoa(split)
+		strs = append(strs, id)
+	}
+	return strings.Join(strs, ",")
+}
