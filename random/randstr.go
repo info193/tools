@@ -8,8 +8,12 @@ import (
 )
 
 func RandomStrSeed(str string) int64 {
-	byteStr := []byte(str)
 	var seed int64
+	if str == "" {
+		return seed
+	}
+	byteStr := []byte(str)
+
 	for _, value := range byteStr {
 		byteCode, _ := strconv.ParseInt(fmt.Sprintf("%d", value), 10, 64)
 		seed += byteCode
@@ -17,6 +21,9 @@ func RandomStrSeed(str string) int64 {
 	return seed
 }
 func RandomIntSeed(str string) int64 {
+	if str == "" {
+		return 0
+	}
 	seed, _ := strconv.ParseInt(str, 10, 64)
 	return seed
 }
