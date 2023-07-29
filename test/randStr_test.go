@@ -7,7 +7,9 @@ import (
 )
 
 func TestRandStr(t *testing.T) {
-	fmt.Println(random.RandomStr(5))
-	fmt.Println(random.RandomInt(5))
-	fmt.Println(random.RandomInt64(5))
+	fmt.Println(random.RandomStr(6, 19999999999))
+	fmt.Println(random.RandomInt(6, 19999999999))
+	fmt.Println(random.RandomInt64(6, 19999999999))
+	fmt.Println(random.RandomStrSeed("?.,<>/:1"))
+	fmt.Println(random.RandomIntSeed("19999999999"))
 }
