@@ -6,7 +6,7 @@ import (
 )
 
 func TestM3u8(t *testing.T) {
-	// 初始化设置输出路径
+	// 初始化设置输出路径1
 	m3u8 := m3u82.NewM3U8("D:\\project\\tools/m3u8")
 	// 下载m3u8文件
 	urls := []string{
