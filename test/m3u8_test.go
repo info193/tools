@@ -17,3 +17,4 @@ func TestM3u8(t *testing.T) {
 	}
 	m3u8.Download(urls)
 }
+
