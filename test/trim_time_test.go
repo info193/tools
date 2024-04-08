@@ -17,11 +17,11 @@ func TestTimeSpan(t *testing.T) {
 	//	fmt.Println("结束时间大于当前时间")
 	//}
 
-	var duration int64 = 180
+	var duration int64 = 60
 	periodStartHour := "12:00"
 	periodEndHour := "00:00"
-	subscribeStartDate := "2024-04-09 10:59"
-	subscribeEndDate := "2024-04-09 13:00"
+	subscribeStartDate := "2024-04-09 23:11"
+	subscribeEndDate := "2024-04-10 01:00"
 	trimTime := utils.NewTrimTime(duration, periodStartHour, periodEndHour, subscribeStartDate, subscribeEndDate)
 	ts := trimTime.Period()
 	fmt.Println(fmt.Sprintf("%+v", ts))

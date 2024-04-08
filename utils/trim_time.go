@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -23,6 +24,7 @@ type TimeSpan struct {
 	ExceedEndDate            string // 超出结束时间
 	AvailableStartPeriodHour string // 可用开始时段
 	AvailableEndPeriodHour   string // 可用结束时段
+	DeductionDuration        int64  // 抵扣时长 isExceed  =1 的时候才会有值
 	ExceedDuration           int64  // 超出时长
 	MaxLimitDuration         int64  // 最大限制超出时长
 	Type                     int64  // 类型 1隔日（正常可用范围） 2隔日（在预约开始结束时间及时段结束时间范围内） 3隔日（预约开始时间大于时段结束时间范围内）4当日
@@ -104,7 +106,6 @@ func (l *TrimTime) spanTime() (error, *TimeSpan) {
 		if l.tempSubscribeStartTime.Unix() >= tsPeriodStartTime.Unix() && l.tempSubscribeStartTime.Unix() <= tsPeriodEndTime.Unix() {
 			//fmt.Println("大于范围内")
 			timeSpan.OffsetStartDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-
 			l.tempSubscribeStartTime = l.tempSubscribeStartTime.Add(time.Minute * time.Duration(l.Duration))
 			//fmt.Println(tempSubscribeStartTime.Format("2006-01-02 15:04"), tsPeriodEndTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
 
@@ -374,6 +375,15 @@ func (l *TrimTime) spanTimeTwo() (error, *TimeSpan) {
 	return errors.New("错误"), nil
 }
 
+func (l *TrimTime) minute(cst, cet time.Time) int64 {
+	second := cet.Unix() - cst.Unix()
+	if second < 60 {
+		return 0
+	}
+	c := math.Floor(float64(second) / 60)
+	return int64(c)
+}
+
 // 获取可用时段 extractPeriod
 func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 	var periodStartTime time.Time
@@ -407,6 +417,9 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					timeSpan.IsExceed = 2
 					lists = append(lists, timeSpan)
 				} else {
+					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					timeSpan.DeductionDuration = l.minute(cst, cet)
 					timeSpan.IsExceed = 1
 					lists = append(lists, timeSpan)
 				}
@@ -438,6 +451,9 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 						timeSpan.IsExceed = 2
 						lists = append(lists, timeSpan)
 					} else {
+						cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+						cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+						timeSpan.DeductionDuration = l.minute(cst, cet)
 						timeSpan.IsExceed = 1
 						lists = append(lists, timeSpan)
 					}
@@ -489,6 +505,9 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 						//return
 						//break
 					} else {
+						cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+						cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+						timeSpan.DeductionDuration = l.minute(cst, cet)
 						timeSpan.IsExceed = 1
 						lists = append(lists, timeSpan)
 						//// 正常使用
@@ -517,6 +536,9 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 						//return
 						//break
 					} else {
+						cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+						cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+						timeSpan.DeductionDuration = l.minute(cst, cet)
 						timeSpan.IsExceed = 1
 						lists = append(lists, timeSpan)
 						//// 正常使用
@@ -597,6 +619,9 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 						//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), resultEndTime.Format("2006-01-02 15:04"), periodEndTime.Format("2006-01-02 15:04"))
 						lists = append(lists, timeSpan)
 					} else {
+						cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+						cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+						timeSpan.DeductionDuration = l.minute(cst, cet)
 						timeSpan.IsExceed = 1
 						lists = append(lists, timeSpan)
 						//// 正常使用
