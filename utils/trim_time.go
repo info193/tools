@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+var (
+	TrimTimeAvailable                int64 = 0
+	TrimTimeAvailableExceedPeriod    int64 = 1
+	TrimTimeNotAvailableExceedPeriod int64 = 2
+	TrimTimeNotAvailableRange        int64 = 3
+)
+
 type TrimTime struct {
 	Duration               int64  // 卡券时长
 	Neutron                int64  // 边界时间
@@ -116,15 +123,15 @@ func (l *TrimTime) spanTime() (error, *TimeSpan) {
 				timeSpan.ExceedEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
 				timeSpan.ExceedDuration = exceedSecond
 				timeSpan.MaxLimitDuration = l.Neutron
-				timeSpan.IsExceed = 1
+				timeSpan.IsExceed = TrimTimeAvailableExceedPeriod
 			} else {
 				timeSpan.OffsetEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
 				timeSpan.MaxLimitDuration = l.Neutron
-				timeSpan.IsExceed = 0
+				timeSpan.IsExceed = TrimTimeAvailable
 			}
 
 			if exceedSecond > l.Neutron*60 {
-				timeSpan.IsExceed = 2
+				timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 				//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), tempSubscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
 			}
 			//fmt.Println("option===", option)
@@ -142,14 +149,14 @@ func (l *TrimTime) spanTime() (error, *TimeSpan) {
 				timeSpan.ExceedEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
 				timeSpan.ExceedDuration = exceedSecond
 				timeSpan.MaxLimitDuration = l.Neutron
-				timeSpan.IsExceed = 1
+				timeSpan.IsExceed = TrimTimeAvailableExceedPeriod
 			} else {
 				timeSpan.OffsetEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
 				timeSpan.MaxLimitDuration = l.Neutron
-				timeSpan.IsExceed = 0
+				timeSpan.IsExceed = TrimTimeAvailable
 			}
 			if exceedSecond > l.Neutron*60 {
-				timeSpan.IsExceed = 2
+				timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 				//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), tempSubscribeStartTime.Format("2006-01-02 15:04"), tePeriodEndTime.Format("2006-01-02 15:04"))
 			}
 			return nil, &timeSpan
@@ -166,7 +173,7 @@ func (l *TrimTime) spanTime() (error, *TimeSpan) {
 				timeSpan.OffsetStartDate = tsPeriodStartTime.Format("2006-01-02 15:04")
 				timeSpan.OffsetEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
 				timeSpan.MaxLimitDuration = l.Neutron
-				timeSpan.IsExceed = 0
+				timeSpan.IsExceed = TrimTimeAvailable
 				//fmt.Println("不在范围1：", option)
 				return nil, &timeSpan
 			}
@@ -179,9 +186,9 @@ func (l *TrimTime) spanTime() (error, *TimeSpan) {
 				timeSpan.ExceedEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
 				timeSpan.ExceedDuration = exceedSecond
 				timeSpan.MaxLimitDuration = l.Neutron
-				timeSpan.IsExceed = 0
+				timeSpan.IsExceed = TrimTimeAvailable
 				if exceedSecond > l.Neutron*60 {
-					timeSpan.IsExceed = 2
+					timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 					//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), tempSubscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
 				}
 				//fmt.Println("不在范围2：", exceedSecond, option, tsPeriodEndTime.Format("2006-01-02 15:04"))
@@ -197,9 +204,9 @@ func (l *TrimTime) spanTime() (error, *TimeSpan) {
 				timeSpan.ExceedEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
 				timeSpan.ExceedDuration = exceedSecond
 				timeSpan.MaxLimitDuration = l.Neutron
-				timeSpan.IsExceed = 0
+				timeSpan.IsExceed = TrimTimeAvailable
 				if exceedSecond > l.Neutron*60 {
-					timeSpan.IsExceed = 2
+					timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 					//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), tempSubscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
 				}
 				//fmt.Println("不在范围3：", option)
@@ -214,161 +221,7 @@ func (l *TrimTime) spanTime() (error, *TimeSpan) {
 		timeSpan.ExceedEndDate = l.EndTime.Format("2006-01-02 15:04")
 		timeSpan.ExceedDuration = 0
 		timeSpan.MaxLimitDuration = l.Neutron
-		timeSpan.IsExceed = 2
-		return nil, &timeSpan
-		//fmt.Println("正常时间内", subscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
-	}
-	return errors.New("错误"), nil
-}
-
-func (l *TrimTime) spanTimeTwo() (error, *TimeSpan) {
-	var timeSpan TimeSpan
-	//fmt.Println("spanTimeTwo........")
-	if l.StartTime.Format("2006-01-02") == l.EndTime.Format("2006-01-02") && l.PeriodStartHour > l.PeriodEndHour {
-		tsPeriodStartTime, _ := time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), l.PeriodStartHour), time.Local)
-		tsPeriodEndTime, _ := time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Add(time.Hour*time.Duration(24)).Format("2006-01-02"), l.PeriodEndHour), time.Local)
-		fmt.Println(tsPeriodStartTime.Format("2006-01-02 15:04"), tsPeriodEndTime.Format("2006-01-02 15:04"), l.tempSubscribeStartTime.Format("2006-01-02 15:04"))
-		timeSpan.AvailableStartPeriodHour = l.PeriodStartHour // 可用开始时段
-		timeSpan.AvailableEndPeriodHour = l.PeriodEndHour     // 可用结束时段
-		// 预约开始时间-预约结束时间  使用优惠券在使用时间范围内 可用
-		if l.EndTime.Unix() <= tsPeriodEndTime.Unix() && l.EndTime.Unix() >= tsPeriodStartTime.Unix() {
-			couponEndTime := tsPeriodStartTime.Add(time.Minute * time.Duration(l.Duration))
-			fmt.Println("在范围内", tsPeriodStartTime.Format("2006-01-02 15:04"), couponEndTime.Format("2006-01-02 15:04"))
-			//exceedSecond := couponEndTime.Unix() - tsPeriodEndTime.Unix()
-			timeSpan.OffsetStartDate = tsPeriodStartTime.Format("2006-01-02 15:04")
-			timeSpan.OffsetEndDate = couponEndTime.Format("2006-01-02 15:04")
-			if l.StartTime.Unix() > tsPeriodStartTime.Unix() {
-				timeSpan.OffsetStartDate = l.StartTime.Format("2006-01-02 15:04")
-				timeSpan.OffsetEndDate = l.StartTime.Add(time.Minute * time.Duration(l.Duration)).Format("2006-01-02 15:04")
-			}
-			timeSpan.ExceedDuration = 0
-			timeSpan.MaxLimitDuration = l.Neutron
-			timeSpan.IsExceed = 1
-			//fmt.Println("option===", option)
-			return nil, &timeSpan
-			//exceedSecond := l.tempSubscribeStartTime.Unix() - tsPeriodEndTime.Unix()
-		}
-		//tsPeriodStartTime, _ := time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), l.PeriodStartHour), time.Local)
-		//tsPeriodEndTime, _ := time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), "23:59"), time.Local)
-		//tePeriodStartTime, _ := time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), "00:00"), time.Local)
-		//tePeriodEndTime, _ := time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), l.PeriodEndHour), time.Local)
-		//
-		//timeSpan.AvailableStartPeriodHour = l.PeriodStartHour // 可用开始时段
-		//timeSpan.AvailableEndPeriodHour = l.PeriodEndHour     // 可用结束时段
-		//
-		//if l.tempSubscribeStartTime.Unix() >= tsPeriodStartTime.Unix() && l.tempSubscribeStartTime.Unix() <= tsPeriodEndTime.Unix() {
-		//	//fmt.Println("大于范围内")
-		//	timeSpan.OffsetStartDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//
-		//	l.tempSubscribeStartTime = l.tempSubscribeStartTime.Add(time.Minute * time.Duration(l.Duration))
-		//	//fmt.Println(tempSubscribeStartTime.Format("2006-01-02 15:04"), tsPeriodEndTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
-		//
-		//	exceedSecond := l.tempSubscribeStartTime.Unix() - tsPeriodEndTime.Unix()
-		//	if l.tempSubscribeStartTime.After(tsPeriodEndTime) {
-		//		timeSpan.OffsetEndDate = tsPeriodEndTime.Format("2006-01-02 15:04")
-		//		timeSpan.ExceedStartDate = tsPeriodEndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
-		//		timeSpan.ExceedEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.ExceedDuration = exceedSecond
-		//		timeSpan.MaxLimitDuration = l.Neutron
-		//		timeSpan.IsExceed = 1
-		//	} else {
-		//		timeSpan.OffsetEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.MaxLimitDuration = l.Neutron
-		//		timeSpan.IsExceed = 0
-		//	}
-		//
-		//	if exceedSecond > l.Neutron*60 {
-		//		timeSpan.IsExceed = 2
-		//		//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), tempSubscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
-		//	}
-		//	//fmt.Println("option===", option)
-		//	return nil, &timeSpan
-		//}
-		//if l.tempSubscribeStartTime.Unix() >= tePeriodStartTime.Unix() && l.tempSubscribeStartTime.Unix() <= tePeriodEndTime.Unix() {
-		//	//fmt.Println("小于 范围内")
-		//	timeSpan.OffsetStartDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//	l.tempSubscribeStartTime = l.tempSubscribeStartTime.Add(time.Minute * time.Duration(l.Duration))
-		//	//fmt.Println(tempSubscribeStartTime.Format("2006-01-02 15:04"), tePeriodEndTime.Format("2006-01-02 15:04"), tePeriodEndTime.Format("2006-01-02 15:04"))
-		//	exceedSecond := l.tempSubscribeStartTime.Unix() - tePeriodEndTime.Unix()
-		//	if l.tempSubscribeStartTime.After(tePeriodEndTime) {
-		//		timeSpan.OffsetEndDate = tePeriodEndTime.Format("2006-01-02 15:04")
-		//		timeSpan.ExceedStartDate = tePeriodEndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
-		//		timeSpan.ExceedEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.ExceedDuration = exceedSecond
-		//		timeSpan.MaxLimitDuration = l.Neutron
-		//		timeSpan.IsExceed = 1
-		//	} else {
-		//		timeSpan.OffsetEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.MaxLimitDuration = l.Neutron
-		//		timeSpan.IsExceed = 0
-		//	}
-		//	if exceedSecond > l.Neutron*60 {
-		//		timeSpan.IsExceed = 2
-		//		//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), tempSubscribeStartTime.Format("2006-01-02 15:04"), tePeriodEndTime.Format("2006-01-02 15:04"))
-		//	}
-		//	return nil, &timeSpan
-		//}
-		//if l.tempSubscribeStartTime.Unix() < tsPeriodStartTime.Unix() && l.tempSubscribeStartTime.Unix() > tePeriodEndTime.Unix() {
-		//	//fmt.Println("不在 范围内")
-		//	timeSpan.OffsetStartDate = tsPeriodStartTime.Format("2006-01-02 15:04")
-		//	l.tempSubscribeStartTime = tsPeriodStartTime.Add(time.Minute * time.Duration(l.Duration))
-		//	//fmt.Println(tempSubscribeStartTime.Format("2006-01-02 15:04"), tsPeriodStartTime.Format("2006-01-02 15:04"), tsPeriodEndTime.Format("2006-01-02 15:04"))
-		//	//
-		//	//fmt.Println(tempSubscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"), "..................")
-		//	// 预约开始时间小于等于预约结束时间
-		//	if l.tempSubscribeStartTime.Unix() <= l.EndTime.Unix() {
-		//		timeSpan.OffsetStartDate = tsPeriodStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.OffsetEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.MaxLimitDuration = l.Neutron
-		//		timeSpan.IsExceed = 0
-		//		//fmt.Println("不在范围1：", option)
-		//		return nil, &timeSpan
-		//	}
-		//	// 预约开始时间大于预约开始结束时间 ，且小于时段结束时间
-		//	if l.tempSubscribeStartTime.Unix() > l.EndTime.Unix() && l.tempSubscribeStartTime.Unix() < tsPeriodEndTime.Unix() {
-		//		exceedSecond := l.tempSubscribeStartTime.Unix() - l.EndTime.Unix()
-		//		timeSpan.OffsetStartDate = tsPeriodStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.OffsetEndDate = l.EndTime.Format("2006-01-02 15:04")
-		//		timeSpan.ExceedStartDate = l.EndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
-		//		timeSpan.ExceedEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.ExceedDuration = exceedSecond
-		//		timeSpan.MaxLimitDuration = l.Neutron
-		//		timeSpan.IsExceed = 0
-		//		if exceedSecond > l.Neutron*60 {
-		//			timeSpan.IsExceed = 2
-		//			//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), tempSubscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
-		//		}
-		//		//fmt.Println("不在范围2：", exceedSecond, option, tsPeriodEndTime.Format("2006-01-02 15:04"))
-		//		return nil, &timeSpan
-		//	}
-		//
-		//	// 预约开始时间大于预约开始结束时间， 且大于时段结束时间。
-		//	if l.tempSubscribeStartTime.Unix() > l.EndTime.Unix() && l.tempSubscribeStartTime.Unix() > tsPeriodEndTime.Unix() {
-		//		exceedSecond := l.tempSubscribeStartTime.Unix() - tsPeriodEndTime.Unix()
-		//		timeSpan.OffsetStartDate = tsPeriodStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.OffsetEndDate = tsPeriodEndTime.Format("2006-01-02 15:04")
-		//		timeSpan.ExceedStartDate = tsPeriodEndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
-		//		timeSpan.ExceedEndDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
-		//		timeSpan.ExceedDuration = exceedSecond
-		//		timeSpan.MaxLimitDuration = l.Neutron
-		//		timeSpan.IsExceed = 0
-		//		if exceedSecond > l.Neutron*60 {
-		//			timeSpan.IsExceed = 2
-		//			//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), tempSubscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
-		//		}
-		//		//fmt.Println("不在范围3：", option)
-		//		return nil, &timeSpan
-		//	}
-		//}
-
-		// 默认禁止使用
-		timeSpan.OffsetStartDate = ""
-		timeSpan.OffsetEndDate = ""
-		timeSpan.ExceedStartDate = l.StartTime.Format("2006-01-02 15:04")
-		timeSpan.ExceedEndDate = l.EndTime.Format("2006-01-02 15:04")
-		timeSpan.ExceedDuration = 0
-		timeSpan.MaxLimitDuration = l.Neutron
-		timeSpan.IsExceed = 2
+		timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 		return nil, &timeSpan
 		//fmt.Println("正常时间内", subscribeStartTime.Format("2006-01-02 15:04"), subscribeEndTime.Format("2006-01-02 15:04"))
 	}
@@ -412,15 +265,15 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 				timeSpan.ExceedDuration = exceedSecond
 				timeSpan.MaxLimitDuration = l.Neutron
 				timeSpan.Type = 2
-				timeSpan.IsExceed = 0
+				timeSpan.IsExceed = TrimTimeAvailable
 				if exceedSecond > l.Neutron*60 {
-					timeSpan.IsExceed = 2
+					timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 					lists = append(lists, timeSpan)
 				} else {
 					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
 					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
 					timeSpan.DeductionDuration = l.minute(cst, cet)
-					timeSpan.IsExceed = 1
+					timeSpan.IsExceed = TrimTimeAvailableExceedPeriod
 					lists = append(lists, timeSpan)
 				}
 				//fmt.Println("1111111")
@@ -435,7 +288,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					timeSpan.ExceedDuration = 0
 					timeSpan.MaxLimitDuration = l.Neutron
 					timeSpan.Type = 2
-					timeSpan.IsExceed = 0
+					timeSpan.IsExceed = TrimTimeAvailable
 					lists = append(lists, timeSpan)
 				}
 				if l.tempSubscribeStartTime.Unix() < tperiodEndTime.Unix() && tResultEndTime.Unix() <= tperiodEndTime.Unix() && tResultEndTime.Unix() > l.EndTime.Unix() {
@@ -445,16 +298,16 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					timeSpan.ExceedDuration = 0
 					timeSpan.MaxLimitDuration = l.Neutron
 					timeSpan.Type = 2
-					timeSpan.IsExceed = 2
+					timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 					exceedSecond := tResultEndTime.Unix() - l.EndTime.Unix()
 					if exceedSecond > l.Neutron*60 {
-						timeSpan.IsExceed = 2
+						timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 						lists = append(lists, timeSpan)
 					} else {
 						cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
 						cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
 						timeSpan.DeductionDuration = l.minute(cst, cet)
-						timeSpan.IsExceed = 1
+						timeSpan.IsExceed = TrimTimeAvailableExceedPeriod
 						lists = append(lists, timeSpan)
 					}
 				}
@@ -495,10 +348,10 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					timeSpan.ExceedDuration = exceedSecond
 					timeSpan.MaxLimitDuration = l.Neutron
 					timeSpan.Type = 2
-					timeSpan.IsExceed = 0
+					timeSpan.IsExceed = TrimTimeAvailable
 					//fmt.Println("resultEndTime>EndTime 222", exceedSecond)
 					if exceedSecond > l.Neutron*60 {
-						timeSpan.IsExceed = 2
+						timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 						lists = append(lists, timeSpan)
 						//fmt.Println(fmt.Sprintf("错误1，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), resultEndTime.Format("2006-01-02 15:04"), periodEndTime.Format("2006-01-02 15:04"))
 						//fmt.Println("错误1", timeSpan)
@@ -508,7 +361,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 						cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
 						cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
 						timeSpan.DeductionDuration = l.minute(cst, cet)
-						timeSpan.IsExceed = 1
+						timeSpan.IsExceed = TrimTimeAvailableExceedPeriod
 						lists = append(lists, timeSpan)
 						//// 正常使用
 						//break
@@ -526,10 +379,10 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					timeSpan.ExceedDuration = exceedSecond
 					timeSpan.MaxLimitDuration = l.Neutron
 					timeSpan.Type = 3
-					timeSpan.IsExceed = 0
+					timeSpan.IsExceed = TrimTimeAvailable
 					//fmt.Println("resultEndTime>periodEndTime 111", exceedSecond)
 					if exceedSecond > l.Neutron*60 {
-						timeSpan.IsExceed = 2
+						timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 						lists = append(lists, timeSpan)
 						//fmt.Println(fmt.Sprintf("错误2，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), resultEndTime.Format("2006-01-02 15:04"), periodEndTime.Format("2006-01-02 15:04"))
 						//fmt.Println("错误2", timeSpan)
@@ -539,7 +392,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 						cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
 						cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
 						timeSpan.DeductionDuration = l.minute(cst, cet)
-						timeSpan.IsExceed = 1
+						timeSpan.IsExceed = TrimTimeAvailableExceedPeriod
 						lists = append(lists, timeSpan)
 						//// 正常使用
 						//break
@@ -552,7 +405,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					timeSpan.ExceedEndDate = ""
 					timeSpan.MaxLimitDuration = l.Neutron
 					timeSpan.Type = 1
-					timeSpan.IsExceed = 0
+					timeSpan.IsExceed = TrimTimeAvailable
 					lists = append(lists, timeSpan)
 					//fmt.Println("resultEndTime>periodEndTime 33333")
 					// 正常使用
@@ -584,7 +437,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 						timeSpan.ExceedDuration = 0
 						timeSpan.MaxLimitDuration = l.Neutron
 						timeSpan.Type = 4
-						timeSpan.IsExceed = 3
+						timeSpan.IsExceed = TrimTimeNotAvailableRange
 						lists = append(lists, timeSpan)
 						break
 					}
@@ -599,7 +452,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 							timeSpan.ExceedDuration = 0
 							timeSpan.MaxLimitDuration = l.Neutron
 							timeSpan.Type = 4
-							timeSpan.IsExceed = 3
+							timeSpan.IsExceed = TrimTimeNotAvailableRange
 							lists = append(lists, timeSpan)
 							break
 						}
@@ -615,14 +468,14 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					timeSpan.MaxLimitDuration = l.Neutron
 					timeSpan.Type = 4
 					if exceedSecond > l.Neutron*60 {
-						timeSpan.IsExceed = 2
+						timeSpan.IsExceed = TrimTimeNotAvailableExceedPeriod
 						//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), resultEndTime.Format("2006-01-02 15:04"), periodEndTime.Format("2006-01-02 15:04"))
 						lists = append(lists, timeSpan)
 					} else {
 						cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
 						cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
 						timeSpan.DeductionDuration = l.minute(cst, cet)
-						timeSpan.IsExceed = 1
+						timeSpan.IsExceed = TrimTimeAvailableExceedPeriod
 						lists = append(lists, timeSpan)
 						//// 正常使用
 						//break
@@ -642,7 +495,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					timeSpan.ExceedDuration = 0
 					timeSpan.MaxLimitDuration = l.Neutron
 					timeSpan.Type = 4
-					timeSpan.IsExceed = 0
+					timeSpan.IsExceed = TrimTimeAvailable
 					lists = append(lists, timeSpan)
 					// 正常使用
 					break
@@ -662,7 +515,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					if l.EndTime.Format("15:04") < l.PeriodStartHour {
 						timeSpan = TimeSpan{}
 						timeSpan.Type = 4
-						timeSpan.IsExceed = 3
+						timeSpan.IsExceed = TrimTimeNotAvailableRange
 						lists = append(lists, timeSpan)
 						//fmt.Println("超出结束时间，且不在使用时段内")
 						break
@@ -675,10 +528,10 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 	var timeSpan *TimeSpan
 	for _, value := range lists {
 		val := value
-		if value.IsExceed == 0 || value.IsExceed == 1 {
+		if value.IsExceed == TrimTimeAvailable || value.IsExceed == TrimTimeAvailableExceedPeriod {
 			return nil, &val
 		}
-		if timeSpan == nil && (value.IsExceed == 2 || value.IsExceed == 3) {
+		if timeSpan == nil && (value.IsExceed == TrimTimeNotAvailableExceedPeriod || value.IsExceed == TrimTimeNotAvailableRange) {
 			timeSpan = &val
 		}
 	}
