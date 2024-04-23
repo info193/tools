@@ -26,7 +26,11 @@ func TestTimeSpan(t *testing.T) {
 	//ts := trimTime.Period()
 	//fmt.Println(fmt.Sprintf("%+v", ts))
 
-	trimTime := utils.NewTrimTime(duration, periodStartHour, periodEndHour, "2024-04-23 18:25", "2024-04-23 22:25")
+	//trimTime := utils.NewTrimTime(duration, periodStartHour, periodEndHour, "2024-04-23 18:25", "2024-04-23 22:25")
+	//coupon := trimTime.Period()
+	//fmt.Println(coupon)
+
+	trimTime := utils.NewTrimTime(duration, periodStartHour, periodEndHour, "2024-04-23 18:57", "2024-04-23 20:57")
 	coupon := trimTime.Period()
 	fmt.Println(coupon)
 

@@ -488,7 +488,10 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 					if l.StartTime.Unix() > periodStartTime.Unix() {
 						timeSpan.OffsetStartDate = l.StartTime.Format("2006-01-02 15:04")
 					}
-					if l.EndTime.Unix() < periodEndTime.Unix() && resultEndTime.Unix() < periodEndTime.Unix() {
+					if l.EndTime.Unix() < periodEndTime.Unix() && resultEndTime.Unix() < periodEndTime.Unix() && l.EndTime.Unix() < resultEndTime.Unix() {
+						timeSpan.OffsetEndDate = l.EndTime.Format("2006-01-02 15:04")
+					}
+					if l.EndTime.Unix() < periodEndTime.Unix() && resultEndTime.Unix() < periodEndTime.Unix() && l.EndTime.Unix() > resultEndTime.Unix() {
 						timeSpan.OffsetEndDate = resultEndTime.Format("2006-01-02 15:04")
 					}
 					// 正常使用时段
