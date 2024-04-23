@@ -18,13 +18,18 @@ func TestTimeSpan(t *testing.T) {
 	//}
 
 	var duration int64 = 60
-	periodStartHour := "12:00"
-	periodEndHour := "00:00"
-	subscribeStartDate := "2024-04-09 23:11"
-	subscribeEndDate := "2024-04-10 01:00"
-	trimTime := utils.NewTrimTime(duration, periodStartHour, periodEndHour, subscribeStartDate, subscribeEndDate)
-	ts := trimTime.Period()
-	fmt.Println(fmt.Sprintf("%+v", ts))
+	periodStartHour := "20:00"
+	periodEndHour := "22:30"
+	//subscribeStartDate := "2024-04-09 23:11"
+	//subscribeEndDate := "2024-04-10 01:00"
+	//trimTime := utils.NewTrimTime(duration, periodStartHour, periodEndHour, subscribeStartDate, subscribeEndDate)
+	//ts := trimTime.Period()
+	//fmt.Println(fmt.Sprintf("%+v", ts))
+
+	trimTime := utils.NewTrimTime(duration, periodStartHour, periodEndHour, "2024-04-23 18:25", "2024-04-23 22:25")
+	coupon := trimTime.Period()
+	fmt.Println(coupon)
+
 	//fmt.Println(trimTime.Period())
 	//boundaryDuration := trimTime.Neutron * 60 // 边界时间
 	//if trimTime.EndTime.Unix()-trimTime.StartTime.Unix() < boundaryDuration {

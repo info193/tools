@@ -421,8 +421,10 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 				timeSpan.OffsetStartDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
 				resultEndTime = l.tempSubscribeStartTime.Add(time.Minute * time.Duration(l.Duration))
 				timeSpan.OffsetEndDate = resultEndTime.Format("2006-01-02 15:04")
+
 				// 判断开始时间是否小于 时段开始时间，则使用开始时间
 				if l.tempSubscribeStartTime.Unix() < periodStartTime.Unix() {
+
 					resultEndTime = periodStartTime.Add(time.Minute * time.Duration(l.Duration))
 					timeSpan.OffsetStartDate = periodStartTime.Format("2006-01-02 15:04")
 					timeSpan.OffsetEndDate = resultEndTime.Format("2006-01-02 15:04")
@@ -487,7 +489,7 @@ func (l *TrimTime) extractPeriod() (error, *TimeSpan) {
 						timeSpan.OffsetStartDate = l.StartTime.Format("2006-01-02 15:04")
 					}
 					if l.EndTime.Unix() < periodEndTime.Unix() && resultEndTime.Unix() < periodEndTime.Unix() {
-						timeSpan.OffsetEndDate = l.EndTime.Format("2006-01-02 15:04")
+						timeSpan.OffsetEndDate = resultEndTime.Format("2006-01-02 15:04")
 					}
 					// 正常使用时段
 					timeSpan.ExceedStartDate = ""
