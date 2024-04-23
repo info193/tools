@@ -13,10 +13,9 @@ func TestCharging(t *testing.T) {
 	periods[1] = utils.ChargePeriod{EndPeriod: 12, StartPeriod: 8, End: "08:00", Start: "12:00", Price: 9.90}
 	periods[2] = utils.ChargePeriod{EndPeriod: 18, StartPeriod: 12, End: "12:00", Start: "18:00", Price: 10.00}
 	periods[3] = utils.ChargePeriod{EndPeriod: 24, StartPeriod: 18, End: "18:00", Start: "24:00", Price: 11.00}
-	price, periodAll := utils.NewCharge(periods, day24HourPeriod).Outlay("2024-01-02 05:23", "2024-01-02 10:59")
-	fmt.Println(price, periodAll)
-
-	pricec, all := utils.NewCharge(periods, day24HourPeriod).OutlaySpecifics("2024-01-02 05:23", "2024-01-02 10:59")
-	fmt.Println(pricec, all)
+	price, periodAll := utils.NewCharge(periods, day24HourPeriod).Outlay("2024-04-22 20:40", "2024-04-23 01:59")
+	fmt.Println(price, periodAll, "-----")
+	pricec, outlaySpecificss := utils.NewCharge(periods, day24HourPeriod).OutlaySpecifics("2024-04-22 20:40", "2024-04-23 01:59")
+	fmt.Println(pricec, outlaySpecificss, "+++++++")
 
 }

@@ -60,27 +60,56 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[int64]float64
 
 	periodArr := make(map[string]float64)   // 每个时段数据
 	periodDetail := make(map[int64]float64) // 时段费用详情
-	for {
-		index := allDay24HourPeriod[l.markStartTime.Format("15:04")]
-		for key, value := range l.periods {
-			if value.StartPeriod <= index && value.EndPeriod > index {
-				tempPrice := value.Price
-				periodArr[l.markStartTime.Format("200601021504")] = tempPrice
-				if value, ok := periodDetail[key]; ok {
-					periodDetail[key], _ = decimal.NewFromFloat(value).Add(decimal.NewFromFloat(tempPrice)).RoundFloor(2).Float64()
-				} else {
-					periodDetail[key] = tempPrice
+	// 判断 如果标记计费 开始及结束时间在同一时间则跳过
+	if l.markStartTime.Format("200601021504") != l.markEndTime.Format("200601021504") {
+		for {
+			index := allDay24HourPeriod[l.markStartTime.Format("15:04")]
+			for key, value := range l.periods {
+				if value.StartPeriod <= index && value.EndPeriod > index {
+					tempPrice := value.Price
+					periodArr[l.markStartTime.Format("200601021504")] = tempPrice
+					if value, ok := periodDetail[key]; ok {
+						periodDetail[key], _ = decimal.NewFromFloat(value).Add(decimal.NewFromFloat(tempPrice)).RoundFloor(2).Float64()
+					} else {
+						periodDetail[key] = tempPrice
+					}
 				}
 			}
-		}
-		l.markStartTime = l.markStartTime.Add(time.Hour * 1)
-		if l.markStartTime.Unix() >= l.markEndTime.Unix() {
-			break
+			l.markStartTime = l.markStartTime.Add(time.Hour * 1)
+			if l.markStartTime.Unix() >= l.markEndTime.Unix() {
+				break
+			}
 		}
 	}
 
 	// 计算相差数
 	for key, value := range l.periods {
+		if l.startDiffTime != "" && l.endDiffTime != "" {
+			startDiffIndex := allDay24HourPeriod[l.startDiffTimeDivision]
+			endDiffIndex := allDay24HourPeriod[l.endDiffTimeDivision]
+			// 同一时段
+			if (value.StartPeriod <= startDiffIndex && value.EndPeriod > startDiffIndex) && (value.StartPeriod <= endDiffIndex && value.EndPeriod > endDiffIndex) {
+				var finalPrice float64
+				tempPrice := value.Price
+				minutePrice, _ := decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(60)).Float64() // 计算每分钟单价
+				diff := decimal.NewFromInt(l.startDiffDuration).Add(decimal.NewFromInt(l.endDiffDuration)).IntPart()
+				if diff >= 60 {
+					residueMinute := decimal.NewFromInt(diff).Sub(decimal.NewFromInt(60)).IntPart()
+					residueMinutePrice, _ := decimal.NewFromFloat(minutePrice).Mul(decimal.NewFromInt(residueMinute)).RoundFloor(2).Float64()
+					finalPrice, _ = decimal.NewFromFloat(residueMinutePrice).Add(decimal.NewFromFloat(tempPrice)).Float64()
+				} else {
+					finalPrice, _ = decimal.NewFromFloat(minutePrice).Mul(decimal.NewFromInt(diff)).RoundFloor(2).Float64()
+				}
+
+				if value, ok := periodDetail[key]; ok {
+					periodDetail[key], _ = decimal.NewFromFloat(value).Add(decimal.NewFromFloat(finalPrice)).RoundFloor(2).Float64()
+				} else {
+					periodDetail[key] = finalPrice
+				}
+				periodArr[l.startDiffTime] = finalPrice
+				continue
+			}
+		}
 
 		if l.startDiffTime != "" {
 			startDiffIndex := allDay24HourPeriod[l.startDiffTimeDivision]
@@ -111,8 +140,8 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[int64]float64
 				periodArr[l.endDiffTime] = price
 			}
 		}
-	}
 
+	}
 	var resultPrice float64
 	for _, value := range periodArr {
 		resultPrice, _ = decimal.NewFromFloat(resultPrice).Add(decimal.NewFromFloat(value)).Float64()
@@ -149,27 +178,56 @@ func (l *Charging) OutlaySpecifics(startDate, endDate string) (float64, map[stri
 
 	periodArr := make(map[string]float64)   // 每个时段数据
 	periodDetail := make(map[int64]float64) // 时段费用详情
-	for {
-		index := allDay24HourPeriod[l.markStartTime.Format("15:04")]
-		for key, value := range l.periods {
-			if value.StartPeriod <= index && value.EndPeriod > index {
-				tempPrice := value.Price
-				periodArr[l.markStartTime.Format("200601021504")] = tempPrice
-				if value, ok := periodDetail[key]; ok {
-					periodDetail[key], _ = decimal.NewFromFloat(value).Add(decimal.NewFromFloat(tempPrice)).RoundFloor(2).Float64()
-				} else {
-					periodDetail[key] = tempPrice
+	// 判断 如果标记计费 开始及结束时间在同一时间则跳过
+	if l.markStartTime.Format("200601021504") != l.markEndTime.Format("200601021504") {
+		for {
+			index := allDay24HourPeriod[l.markStartTime.Format("15:04")]
+			for key, value := range l.periods {
+				if value.StartPeriod <= index && value.EndPeriod > index {
+					tempPrice := value.Price
+					periodArr[l.markStartTime.Format("200601021504")] = tempPrice
+					if value, ok := periodDetail[key]; ok {
+						periodDetail[key], _ = decimal.NewFromFloat(value).Add(decimal.NewFromFloat(tempPrice)).RoundFloor(2).Float64()
+					} else {
+						periodDetail[key] = tempPrice
+					}
 				}
 			}
-		}
-		l.markStartTime = l.markStartTime.Add(time.Hour * 1)
-		if l.markStartTime.Unix() >= l.markEndTime.Unix() {
-			break
+			l.markStartTime = l.markStartTime.Add(time.Hour * 1)
+			if l.markStartTime.Unix() >= l.markEndTime.Unix() {
+				break
+			}
 		}
 	}
 
 	// 计算相差数
 	for key, value := range l.periods {
+		if l.startDiffTime != "" && l.endDiffTime != "" {
+			startDiffIndex := allDay24HourPeriod[l.startDiffTimeDivision]
+			endDiffIndex := allDay24HourPeriod[l.endDiffTimeDivision]
+			// 同一时段
+			if (value.StartPeriod <= startDiffIndex && value.EndPeriod > startDiffIndex) && (value.StartPeriod <= endDiffIndex && value.EndPeriod > endDiffIndex) {
+				var finalPrice float64
+				tempPrice := value.Price
+				minutePrice, _ := decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(60)).Float64() // 计算每分钟单价
+				diff := decimal.NewFromInt(l.startDiffDuration).Add(decimal.NewFromInt(l.endDiffDuration)).IntPart()
+				if diff >= 60 {
+					residueMinute := decimal.NewFromInt(diff).Sub(decimal.NewFromInt(60)).IntPart()
+					residueMinutePrice, _ := decimal.NewFromFloat(minutePrice).Mul(decimal.NewFromInt(residueMinute)).RoundFloor(2).Float64()
+					finalPrice, _ = decimal.NewFromFloat(residueMinutePrice).Add(decimal.NewFromFloat(tempPrice)).Float64()
+				} else {
+					finalPrice, _ = decimal.NewFromFloat(minutePrice).Mul(decimal.NewFromInt(diff)).RoundFloor(2).Float64()
+				}
+
+				if value, ok := periodDetail[key]; ok {
+					periodDetail[key], _ = decimal.NewFromFloat(value).Add(decimal.NewFromFloat(finalPrice)).RoundFloor(2).Float64()
+				} else {
+					periodDetail[key] = finalPrice
+				}
+				periodArr[l.startDiffTime] = finalPrice
+				continue
+			}
+		}
 
 		if l.startDiffTime != "" {
 			startDiffIndex := allDay24HourPeriod[l.startDiffTimeDivision]
@@ -200,6 +258,7 @@ func (l *Charging) OutlaySpecifics(startDate, endDate string) (float64, map[stri
 				periodArr[l.endDiffTime] = price
 			}
 		}
+
 	}
 
 	var resultPrice float64
