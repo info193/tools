@@ -1,0 +1,427 @@
+package utils
+
+import (
+	"fmt"
+	"math"
+	"time"
+)
+
+var (
+	TrimCardTimeAvailable                int64 = 0
+	TrimCardTimeAvailableExceedPeriod    int64 = 1
+	TrimCardTimeNotAvailableExceedPeriod int64 = 2
+	TrimCardTimeNotAvailableRange        int64 = 3
+)
+
+type TrimCardTime struct {
+	Duration               int64  // 卡券时长
+	Neutron                int64  // 边界时间
+	PeriodStartHour        string // 开始时段 00:00
+	PeriodEndHour          string // 结束时段 05:00
+	StartTime              time.Time
+	EndTime                time.Time
+	tempSubscribeStartTime time.Time
+}
+
+type TimeCardSpan struct {
+	OffsetStartDate          string // 抵消开始时间
+	OffsetEndDate            string // 抵消结束时间
+	OffsetDuration           int64  // 抵消时长
+	ExceedStartDate          string // 超出开始时间
+	ExceedEndDate            string // 超出结束时间
+	AvailableStartPeriodHour string // 可用开始时段
+	AvailableEndPeriodHour   string // 可用结束时段
+	DeductionDuration        int64  // 抵扣时长 isExceed  =1 的时候才会有值
+	ExceedDuration           int64  // 超出时长
+	MaxLimitDuration         int64  // 最大限制超出时长
+	Type                     int64  // 类型 1隔日（正常可用范围） 2隔日（在预约开始结束时间及时段结束时间范围内） 3隔日（预约开始时间大于时段结束时间范围内）4当日
+	IsExceed                 int64  // 是否超出 0未超出（可用） 1超出预约时段范围（可用）  2超出可用范围  3不在使用时段范围内
+}
+
+func NewTrimCardTime(duration int64, periodStartHour, periodEndHour, subscribeStartDate, subscribeEndDate string) TrimCardTime {
+	subscribeStartTime, _ := time.ParseInLocation("2006-01-02 15:04", subscribeStartDate, time.Local)
+	subscribeEndTime, _ := time.ParseInLocation("2006-01-02 15:04", subscribeEndDate, time.Local)
+	trimTime := TrimCardTime{
+		Duration:               duration,
+		PeriodStartHour:        periodStartHour,
+		PeriodEndHour:          periodEndHour,
+		StartTime:              subscribeStartTime,
+		EndTime:                subscribeEndTime,
+		tempSubscribeStartTime: subscribeStartTime}
+	trimTime.setNeutron()
+	return trimTime
+}
+
+// 设置
+func (l *TrimCardTime) setNeutron() {
+	l.Neutron = 1
+}
+
+func (l *TrimCardTime) minute(cst, cet time.Time) int64 {
+	second := cet.Unix() - cst.Unix()
+	if second < 60 {
+		return 0
+	}
+	c := math.Floor(float64(second) / 60)
+	return int64(c)
+}
+
+// 获取可用时段 extractPeriod
+func (l *TrimCardTime) extractPeriod() (error, *TimeCardSpan) {
+	var periodStartTime time.Time
+	var periodEndTime time.Time
+	var resultEndTime time.Time
+	var lastTime time.Time
+	currentTime := l.tempSubscribeStartTime
+	lists := make([]TimeCardSpan, 0)
+	// 判断隔日 预约同一天的
+	if l.PeriodStartHour > l.PeriodEndHour {
+		tperiodEndTime, _ := time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), l.PeriodEndHour), time.Local)
+		//fmt.Println(periodStartTime.Format("2006-01-02 15:04"), periodEndTime.Format("2006-01-02 15:04"), "======")
+		if l.tempSubscribeStartTime.Unix() < tperiodEndTime.Unix() {
+			timeSpan := TimeCardSpan{}
+			timeSpan.AvailableStartPeriodHour = l.PeriodStartHour
+			timeSpan.AvailableEndPeriodHour = l.PeriodEndHour
+			timeSpan.OffsetStartDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
+			tResultEndTime := l.tempSubscribeStartTime.Add(time.Minute * time.Duration(l.Duration))
+			// 超出部分
+			if tResultEndTime.Unix() > tperiodEndTime.Unix() {
+				timeSpan.OffsetEndDate = tperiodEndTime.Format("2006-01-02 15:04")
+				timeSpan.Type = 2
+				timeSpan.IsExceed = TrimCardTimeAvailable
+				cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+				cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+				timeSpan.OffsetDuration = l.minute(cst, cet)
+				if timeSpan.OffsetDuration < l.Duration {
+					timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+				}
+				lists = append(lists, timeSpan)
+				fmt.Println("--**********0----", timeSpan)
+				//timeSpan.ExceedStartDate = tperiodEndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
+				//timeSpan.ExceedEndDate = tResultEndTime.Format("2006-01-02 15:04")
+				//exceedSecond := tResultEndTime.Unix() - tperiodEndTime.Unix()
+				//timeSpan.ExceedDuration = exceedSecond
+				//timeSpan.MaxLimitDuration = l.Neutron
+				//timeSpan.Type = 2
+				//timeSpan.IsExceed = TrimCardTimeAvailable
+				//
+				//fmt.Println("--**********0----", timeSpan.OffsetStartDate, timeSpan.OffsetEndDate)
+				//
+				//if exceedSecond > l.Neutron*60 {
+				//	timeSpan.IsExceed = TrimCardTimeNotAvailableExceedPeriod
+				//	lists = append(lists, timeSpan)
+				//} else {
+				//
+				//	timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+				//	lists = append(lists, timeSpan)
+				//}
+				//fmt.Println("--**********0----")
+				//fmt.Println("1111111")
+				// 未超出
+			} else {
+				//fmt.Println("未超出")
+				if l.tempSubscribeStartTime.Unix() < tperiodEndTime.Unix() && tResultEndTime.Unix() <= tperiodEndTime.Unix() && tResultEndTime.Unix() < l.EndTime.Unix() {
+					//fmt.Println(tResultEndTime.Format("2006-01-02 15:04"), "ssssssss11111")
+					timeSpan.OffsetEndDate = tResultEndTime.Format("2006-01-02 15:04")
+					timeSpan.ExceedStartDate = ""
+					timeSpan.ExceedEndDate = ""
+					timeSpan.ExceedDuration = 0
+					//timeSpan.MaxLimitDuration = l.Neutron
+					timeSpan.Type = 2
+					timeSpan.IsExceed = TrimCardTimeAvailable
+					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					timeSpan.OffsetDuration = l.minute(cst, cet)
+					if timeSpan.OffsetDuration < l.Duration {
+						timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+					}
+					lists = append(lists, timeSpan)
+					fmt.Println("--**********1----", timeSpan)
+				}
+
+				if l.tempSubscribeStartTime.Unix() < tperiodEndTime.Unix() && tResultEndTime.Unix() <= tperiodEndTime.Unix() && tResultEndTime.Unix() > l.EndTime.Unix() {
+					timeSpan.OffsetEndDate = l.EndTime.Format("2006-01-02 15:04")
+					timeSpan.ExceedStartDate = l.EndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
+					timeSpan.ExceedEndDate = tResultEndTime.Format("2006-01-02 15:04")
+					timeSpan.ExceedDuration = 0
+					timeSpan.MaxLimitDuration = l.Neutron
+					timeSpan.Type = 2
+					timeSpan.IsExceed = TrimCardTimeAvailable
+					fmt.Println("--**********2----", timeSpan.OffsetStartDate, timeSpan.OffsetEndDate)
+					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					timeSpan.OffsetDuration = l.minute(cst, cet)
+					if timeSpan.OffsetDuration < l.Duration {
+						timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+					}
+					lists = append(lists, timeSpan)
+				}
+			}
+		}
+	}
+	fmt.Println("下一步")
+	if len(lists) == 0 {
+		var dayi int64
+		for {
+			timeSpan := TimeCardSpan{}
+			timeSpan.AvailableStartPeriodHour = l.PeriodStartHour // 可用开始时段
+			timeSpan.AvailableEndPeriodHour = l.PeriodEndHour     // 可用结束时段
+			lastTime = l.tempSubscribeStartTime
+			if l.tempSubscribeStartTime.Format("2006-01-02") > l.EndTime.Format("2006-01-02") {
+				//fmt.Println("跳出", l.tempSubscribeStartTime.Format("2006-01-02 15:04"))
+				break
+			}
+			// 隔日
+			if l.PeriodStartHour > l.PeriodEndHour {
+				//fmt.Println("隔日")
+				periodStartTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), l.PeriodStartHour), time.Local)
+				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Add(time.Second*time.Duration(86400)).Format("2006-01-02"), l.PeriodEndHour), time.Local)
+				timeSpan.OffsetStartDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
+				if !l.tempSubscribeStartTime.After(periodStartTime) {
+					l.tempSubscribeStartTime = periodStartTime
+					timeSpan.OffsetStartDate = periodStartTime.Format("2006-01-02 15:04")
+				}
+				// 如果抵消开始时间 大于 预约结束时间
+				if timeSpan.OffsetStartDate > l.EndTime.Format("2006-01-02 15:04") {
+					break
+				}
+				resultEndTime = l.tempSubscribeStartTime.Add(time.Minute * time.Duration(l.Duration))
+				timeSpan.OffsetEndDate = resultEndTime.Format("2006-01-02 15:04")
+
+				// 预约开始时间+优惠时段 大于 预约结束时间 开始时段 12:00 - 04:00  预约时间2024-04-06 23:59 - 2024-04-07 02:30  时长180
+				if resultEndTime.Unix() > l.EndTime.Unix() && resultEndTime.Unix() < periodEndTime.Unix() {
+					timeSpan.OffsetEndDate = l.EndTime.Format("2006-01-02 15:04")
+					timeSpan.ExceedStartDate = l.EndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
+					timeSpan.ExceedEndDate = resultEndTime.Format("2006-01-02 15:04")
+					exceedSecond := resultEndTime.Unix() - l.EndTime.Unix()
+					timeSpan.ExceedDuration = exceedSecond
+					timeSpan.MaxLimitDuration = l.Neutron
+					timeSpan.Type = 2
+					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					timeSpan.OffsetDuration = l.minute(cst, cet)
+					timeSpan.IsExceed = TrimCardTimeAvailable
+					if timeSpan.OffsetDuration < l.Duration {
+						timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+					}
+					lists = append(lists, timeSpan)
+					fmt.Println("resultEndTime>EndTime 222", timeSpan.OffsetStartDate, timeSpan.OffsetEndDate)
+				}
+
+				// 预约开始时间+优惠时段  大于 时段结束时间 开始时段 12:00 - 02:00  预约时间2024-04-06 23:59 - 2024-04-07 01:30  时长180
+				if resultEndTime.Unix() >= periodEndTime.Unix() {
+					if resultEndTime.Unix() >= l.EndTime.Unix() {
+						timeSpan.OffsetEndDate = l.EndTime.Format("2006-01-02 15:04")
+					} else {
+						timeSpan.OffsetEndDate = periodEndTime.Format("2006-01-02 15:04")
+					}
+
+					timeSpan.ExceedStartDate = periodEndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
+					timeSpan.ExceedEndDate = resultEndTime.Format("2006-01-02 15:04")
+					exceedSecond := resultEndTime.Unix() - periodEndTime.Unix()
+					timeSpan.ExceedDuration = exceedSecond
+					timeSpan.MaxLimitDuration = l.Neutron
+					timeSpan.Type = 3
+					timeSpan.IsExceed = TrimCardTimeAvailable
+
+					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					timeSpan.OffsetDuration = l.minute(cst, cet)
+					timeSpan.IsExceed = TrimCardTimeAvailable
+					if timeSpan.OffsetDuration < l.Duration {
+						timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+					}
+					lists = append(lists, timeSpan)
+
+					fmt.Println("resultEndTime>EndTime 111", timeSpan.OffsetStartDate, timeSpan.OffsetEndDate, resultEndTime.Format("2006-01-02 15:04"))
+				}
+
+				if resultEndTime.Unix() < l.EndTime.Unix() && resultEndTime.Unix() < periodEndTime.Unix() {
+					timeSpan.ExceedStartDate = ""
+					timeSpan.ExceedEndDate = ""
+					timeSpan.MaxLimitDuration = l.Neutron
+					timeSpan.Type = 1
+					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					timeSpan.OffsetDuration = l.minute(cst, cet)
+					timeSpan.IsExceed = TrimCardTimeAvailable
+					if timeSpan.OffsetDuration < l.Duration {
+						timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+					}
+					lists = append(lists, timeSpan)
+					fmt.Println("resultEndTime>EndTime 000000", timeSpan.OffsetStartDate, timeSpan.OffsetEndDate, resultEndTime.Format("2006-01-02 15:04"))
+					// 正常使用
+					break
+				}
+			}
+			// 当日
+			if l.PeriodEndHour > l.PeriodStartHour {
+				//fmt.Println("当日")
+				periodStartTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), l.PeriodStartHour), time.Local)
+				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), l.PeriodEndHour), time.Local)
+				timeSpan.OffsetStartDate = l.tempSubscribeStartTime.Format("2006-01-02 15:04")
+				resultEndTime = l.tempSubscribeStartTime.Add(time.Minute * time.Duration(l.Duration))
+				timeSpan.OffsetEndDate = resultEndTime.Format("2006-01-02 15:04")
+
+				// 判断开始时间是否小于 时段开始时间，则使用开始时间
+				if l.tempSubscribeStartTime.Unix() < periodStartTime.Unix() {
+					resultEndTime = periodStartTime.Add(time.Minute * time.Duration(l.Duration))
+					timeSpan.OffsetStartDate = periodStartTime.Format("2006-01-02 15:04")
+					timeSpan.OffsetEndDate = resultEndTime.Format("2006-01-02 15:04")
+					//fmt.Println("小于", resultEndTime.Format("2006-01-02 15:04"))
+				}
+
+				if l.StartTime.Format("2006-01-02") == l.EndTime.Format("2006-01-02") {
+					// 时段开始时间 大于等于 预约结束时间
+					if l.EndTime.Unix() <= periodStartTime.Unix() {
+						timeSpan.ExceedStartDate = ""
+						timeSpan.ExceedEndDate = ""
+						timeSpan.ExceedDuration = 0
+						timeSpan.MaxLimitDuration = l.Neutron
+						timeSpan.Type = 4
+						timeSpan.IsExceed = TrimCardTimeNotAvailableRange
+						timeSpan.OffsetDuration = 0
+						lists = append(lists, timeSpan)
+						fmt.Println("today 0000000000", "不可使用")
+						break
+					}
+					// 可用时段开始时间 大于等于 预约结束时间
+					//if resultEndTime.Unix() >= l.EndTime.Unix() {
+					//	fmt.Println("today -************", (l.EndTime.Unix() - l.tempSubscribeStartTime.Unix()))
+					//	fmt.Println("today -************", l.tempSubscribeStartTime.Format("2006-01-02 15:04"), resultEndTime.Format("2006-01-02 15:04"), periodStartTime.Format("2006-01-02 15:04"), periodEndTime.Format("2006-01-02 15:04"), l.EndTime.Format("2006-01-02 15:04"))
+					//	//if resultEndTime.Unix()>  periodEndTime.Unix()
+					//	//exceedSecond := resultEndTime.Unix() - l.EndTime.Unix()
+					//	//if l.Duration*60-exceedSecond < l.Neutron*60 {
+					//	//	timeSpan.OffsetStartDate = periodStartTime.Format("2006-01-02 15:04")
+					//	//	timeSpan.OffsetEndDate = l.EndTime.Format("2006-01-02 15:04")
+					//	//	timeSpan.ExceedStartDate = ""
+					//	//	timeSpan.ExceedEndDate = ""
+					//	//	timeSpan.ExceedDuration = 0
+					//	//	timeSpan.MaxLimitDuration = l.Neutron
+					//	//	timeSpan.Type = 4
+					//	//	timeSpan.IsExceed = TrimCardTimeNotAvailableRange
+					//	//	lists = append(lists, timeSpan)
+					//	//	fmt.Println("today 111111111")
+					//	//	break
+					//	//}
+					//}
+				}
+
+				if resultEndTime.Unix() >= periodEndTime.Unix() {
+					exceedSecond := resultEndTime.Unix() - periodEndTime.Unix()
+					timeSpan.OffsetEndDate = periodEndTime.Format("2006-01-02 15:04")
+					timeSpan.ExceedStartDate = periodEndTime.Add(time.Minute * 1).Format("2006-01-02 15:04")
+					timeSpan.ExceedEndDate = resultEndTime.Format("2006-01-02 15:04")
+					timeSpan.ExceedDuration = exceedSecond
+					timeSpan.MaxLimitDuration = l.Neutron
+					timeSpan.Type = 4
+
+					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					timeSpan.OffsetDuration = l.minute(cst, cet)
+					timeSpan.IsExceed = TrimCardTimeAvailable
+					if timeSpan.OffsetDuration < l.Duration {
+						timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+					}
+
+					fmt.Println("today 22222222222", timeSpan.OffsetStartDate, timeSpan.OffsetEndDate, timeSpan, timeSpan.OffsetDuration)
+					//if exceedSecond > l.Neutron*60 {
+					//	timeSpan.IsExceed = TrimCardTimeNotAvailableExceedPeriod
+					//	//fmt.Println(fmt.Sprintf("错误，超出可用范围，已超出%v分钟,最大超出限制:%v分钟,值：%v", exceedSecond/60, Neutron, exceedSecond), resultEndTime.Format("2006-01-02 15:04"), periodEndTime.Format("2006-01-02 15:04"))
+					//	lists = append(lists, timeSpan)
+					//} else {
+					//	cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					//	cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					//	timeSpan.DeductionDuration = l.minute(cst, cet)
+					//	timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+					//	lists = append(lists, timeSpan)
+					//	//// 正常使用
+					//	//break
+					//}
+					//fmt.Println("大于时间段时间", resultEndTime.Format("2006-01-02 15:04"), periodEndTime.Format("2006-01-02 15:04"), exceedSecond)
+				} else {
+
+					timeSpan.OffsetStartDate = periodStartTime.Format("2006-01-02 15:04")
+					// 今日 开始时段 02:00 - 12:00  预约时间2024-04-22 06:20 - 2024-04-22 12:10  时长180   返回 111111111
+					if l.StartTime.Unix() > periodStartTime.Unix() {
+						fmt.Println("111111111")
+						timeSpan.OffsetStartDate = l.StartTime.Format("2006-01-02 15:04")
+					}
+					//if resultEndTime.Unix() >= l.EndTime.Unix() {
+					// 今日 开始时段 02:00 - 12:00  预约时间2024-04-22 06:20 - 2024-04-22 09:10  时长180   返回 22222222222
+					if l.EndTime.Unix() < periodEndTime.Unix() && resultEndTime.Unix() < periodEndTime.Unix() && l.EndTime.Unix() < resultEndTime.Unix() {
+						fmt.Println("22222222222")
+						timeSpan.OffsetEndDate = l.EndTime.Format("2006-01-02 15:04")
+					}
+					// 今日 开始时段 02:00 - 12:00  预约时间2024-04-22 06:20 - 2024-04-22 09:50  时长180   返回 3333333333
+					if l.EndTime.Unix() < periodEndTime.Unix() && resultEndTime.Unix() < periodEndTime.Unix() && l.EndTime.Unix() > resultEndTime.Unix() {
+						fmt.Println("3333333333")
+						timeSpan.OffsetEndDate = resultEndTime.Format("2006-01-02 15:04")
+					}
+
+					// 正常使用时段
+					timeSpan.ExceedStartDate = ""
+					timeSpan.ExceedEndDate = ""
+					timeSpan.ExceedDuration = 0
+					timeSpan.MaxLimitDuration = l.Neutron
+					timeSpan.Type = 4
+					cst, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetStartDate, time.Local)
+					cet, _ := time.ParseInLocation("2006-01-02 15:04", timeSpan.OffsetEndDate, time.Local)
+					timeSpan.OffsetDuration = l.minute(cst, cet)
+					timeSpan.IsExceed = TrimCardTimeAvailable
+					if timeSpan.OffsetDuration < l.Duration {
+						timeSpan.IsExceed = TrimCardTimeAvailableExceedPeriod
+					}
+					fmt.Println("today 444444", timeSpan.OffsetStartDate, timeSpan.OffsetEndDate, timeSpan)
+					lists = append(lists, timeSpan)
+					// 正常使用
+					break
+				}
+			}
+			dayi++
+			l.tempSubscribeStartTime = l.StartTime.Add(time.Hour * time.Duration(24*dayi))
+			currentTime = l.tempSubscribeStartTime
+			if currentTime.After(lastTime) {
+				l.tempSubscribeStartTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", l.tempSubscribeStartTime.Format("2006-01-02"), l.PeriodStartHour), time.Local)
+				//fmt.Println("---当", currentTime.Format("2006-01-02 15:04"), lastTime.Format("2006-01-02 15:04"), tempSubscribeStartTime.Format("2006-01-02 15:04"))
+			}
+
+			// 结束时间大于 开始时间
+			if l.PeriodEndHour > l.PeriodStartHour {
+				if l.tempSubscribeStartTime.Format("2006-01-02") == l.EndTime.Format("2006-01-02") && l.tempSubscribeStartTime.After(l.EndTime) {
+					if l.EndTime.Format("15:04") < l.PeriodStartHour {
+						timeSpan = TimeCardSpan{}
+						timeSpan.Type = 4
+						timeSpan.IsExceed = TrimCardTimeNotAvailableRange
+						lists = append(lists, timeSpan)
+						//fmt.Println("超出结束时间，且不在使用时段内")
+						break
+					}
+				}
+			}
+			//time.Sleep(time.Second * 1)
+		}
+	}
+	var timeSpan *TimeCardSpan
+	for _, value := range lists {
+		val := value
+		if value.IsExceed == TrimCardTimeAvailable || value.IsExceed == TrimCardTimeAvailableExceedPeriod {
+			return nil, &val
+		}
+		if timeSpan == nil && (value.IsExceed == TrimCardTimeNotAvailableExceedPeriod || value.IsExceed == TrimCardTimeNotAvailableRange) {
+			timeSpan = &val
+		}
+	}
+	return nil, timeSpan
+}
+
+func (l *TrimCardTime) Period() *TimeCardSpan {
+	//err, timeSpan := l.spanTimeTwo()
+	//if err != nil {
+	err, timeSpan := l.extractPeriod()
+	if err == nil && timeSpan != nil {
+		return timeSpan
+	}
+	//}
+	return timeSpan
+}
