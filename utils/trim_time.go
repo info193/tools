@@ -37,7 +37,7 @@ type TimeSpan struct {
 	IsExceed                 int64  // 是否超出 0完全抵扣（可用） 1抵扣部分（可用）  2超出可用范围  3不在使用时段范围内
 }
 
-func NewTrimCardTime(duration int64, periodStartHour, periodEndHour, subscribeStartDate, subscribeEndDate string) TrimTime {
+func NewTrimTime(duration int64, periodStartHour, periodEndHour, subscribeStartDate, subscribeEndDate string) TrimTime {
 	subscribeStartTime, _ := time.ParseInLocation("2006-01-02 15:04", subscribeStartDate, time.Local)
 	subscribeEndTime, _ := time.ParseInLocation("2006-01-02 15:04", subscribeEndDate, time.Local)
 	trimTime := TrimTime{
