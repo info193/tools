@@ -140,6 +140,11 @@ func (l *TrimTime) extractPeriod(optimal, isType int64) (error, *TimeSpan) {
 		// 判断用户预约开始时间 如果大于等于 实际可抵消结束时间 则不允许使用
 		if l.StartTime.Unix() >= periodEndTime.Unix() {
 			timeSpan.IsExceed = TrimTimeNotAvailableRange
+			//fmt.Println("不在使用范围内0", timeSpan)
+		}
+		// 判断用户预约结束时间 如果小于等于 实际可抵消开始时间 则不允许使用
+		if l.EndTime.Unix() <= periodStartTime.Unix() {
+			timeSpan.IsExceed = TrimTimeNotAvailableRange
 			//fmt.Println("不在使用范围内1", timeSpan)
 		}
 		// 判断用户预约开始时间 如果小于等于 实际可抵消结束时间 则允许使用
