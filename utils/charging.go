@@ -1,16 +1,18 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/shopspring/decimal"
+	"strconv"
 	"time"
 )
 
 type ChargePeriod struct {
-	StartPeriod int64
-	EndPeriod   int64
-	Start       string
-	End         string
-	Price       float64
+	StartPeriod int64   `json:"start_period"`
+	EndPeriod   int64   `json:"end_period"`
+	Start       string  `json:"start"`
+	End         string  `json:"end"`
+	Price       float64 `json:"price"`
 }
 
 type Charging struct {
@@ -266,4 +268,72 @@ func (l *Charging) OutlaySpecifics(startDate, endDate string) (float64, map[stri
 		resultPrice, _ = decimal.NewFromFloat(resultPrice).Add(decimal.NewFromFloat(value)).RoundFloor(2).Float64()
 	}
 	return resultPrice, periodArr
+}
+
+// 金额算出会有误差，具体以结束计算为准
+func (l *Charging) MoneyTransferTime(money float64, startDate string) (string, string) {
+	allPeriods := make(map[int64]float64, 0)
+	for _, value := range l.periods {
+		for i := value.StartPeriod; i < value.EndPeriod; i++ {
+			allPeriods[i] = value.Price
+		}
+	}
+	startTime, _ := time.ParseInLocation("2006-01-02 15:04", startDate, time.Local)
+	endDate := ""
+	day := 1
+	tempMoney := money
+	for {
+		if tempMoney <= 0 {
+			return startDate, endDate
+		}
+		per, _ := strconv.ParseInt(startTime.Format("15"), 10, 64)
+		if val, ok := allPeriods[per]; ok {
+			var tempStartTime time.Time
+			var calculateStartTime int64
+			var calculateEndTime int64
+			if per >= 23 {
+				calculateStartTime = startTime.Unix()
+				tempStartTime = startTime.Add(time.Duration(day*24) * time.Hour)
+				startTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v 00:00", tempStartTime.Format("2006-01-02")), time.Local)
+				calculateEndTime = startTime.Unix()
+				day++
+			} else {
+				calculateStartTime = startTime.Unix()
+				tempStartTime = startTime.Add(1 * time.Hour)
+				startTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v:00", tempStartTime.Format("2006-01-02 15")), time.Local)
+				calculateEndTime = startTime.Unix()
+			}
+
+			// 计算分钟数
+			var minute int64
+			if calculateEndTime-calculateStartTime <= 60 {
+				minute = 1
+			} else {
+				minute = decimal.NewFromInt(calculateEndTime).Sub(decimal.NewFromInt(calculateStartTime)).Div(decimal.NewFromInt(60)).Ceil().IntPart()
+			}
+			if val <= tempMoney {
+				if minute < 60 {
+					minuteUnitPrice, _ := decimal.NewFromFloat(val).Div(decimal.NewFromInt(60)).Float64()
+					minuteTotalMoney, _ := decimal.NewFromFloat(minuteUnitPrice).Mul(decimal.NewFromInt(minute)).Float64()
+					tempMoney -= minuteTotalMoney
+					endDate = time.Unix(calculateStartTime, 0).Add(time.Duration(minute) * time.Minute).Format("2006-01-02 15:04")
+				} else {
+					tempMoney -= val
+					endDate = time.Unix(calculateEndTime, 0).Format("2006-01-02 15:04")
+				}
+			} else {
+				minuteUnitPrice, _ := decimal.NewFromFloat(val).Div(decimal.NewFromInt(60)).Float64()
+				// 小于1分钟 按1分钟算
+				if tempMoney < minuteUnitPrice {
+					endDate = time.Unix(calculateStartTime, 0).Add(1 * time.Minute).Format("2006-01-02 15:04")
+					tempMoney -= minuteUnitPrice
+				} else {
+					minute = decimal.NewFromFloat(tempMoney).Div(decimal.NewFromFloat(minuteUnitPrice)).Ceil().IntPart()
+					endDate = time.Unix(calculateStartTime, 0).Add(time.Duration(minute) * time.Minute).Format("2006-01-02 15:04")
+					tempMoney = 0
+				}
+			}
+		}
+	}
+	return "", ""
 }

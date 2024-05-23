@@ -12,10 +12,12 @@ func TestCharging(t *testing.T) {
 	periods[0] = utils.ChargePeriod{EndPeriod: 8, StartPeriod: 0, End: "00:00", Start: "08:00", Price: 1.99}
 	periods[1] = utils.ChargePeriod{EndPeriod: 12, StartPeriod: 8, End: "08:00", Start: "12:00", Price: 9.90}
 	periods[2] = utils.ChargePeriod{EndPeriod: 18, StartPeriod: 12, End: "12:00", Start: "18:00", Price: 10.00}
-	periods[3] = utils.ChargePeriod{EndPeriod: 24, StartPeriod: 18, End: "18:00", Start: "24:00", Price: 11.00}
+	periods[3] = utils.ChargePeriod{EndPeriod: 24, StartPeriod: 18, End: "18:00", Start: "24:00", Price: 60.00}
 	price, periodAll := utils.NewCharge(periods, day24HourPeriod).Outlay("2024-04-22 20:40", "2024-04-23 01:59")
 	fmt.Println(price, periodAll, "-----")
 	pricec, outlaySpecificss := utils.NewCharge(periods, day24HourPeriod).OutlaySpecifics("2024-04-22 20:40", "2024-04-23 01:59")
 	fmt.Println(pricec, outlaySpecificss, "+++++++")
 
+	startDate, endDate := utils.NewCharge(periods, day24HourPeriod).MoneyTransferTime(60.00, "2024-05-22 22:40")
+	fmt.Println(startDate, endDate)
 }
