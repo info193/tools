@@ -1,5 +1,10 @@
 package utils
 
+import (
+	"fmt"
+	"strings"
+)
+
 func UniqueSliceString(sli ...[]string) []string {
 	dst := make([]string, 0)
 	length := len(sli)
@@ -110,4 +115,20 @@ func DeleteSliceString(a []string, elem string) []string {
 		}
 	}
 	return tgt
+}
+
+func JoinStringInt64(a []int64, str string) string {
+	stringSlice := make([]string, len(a))
+	for i, num := range a {
+		stringSlice[i] = fmt.Sprintf("%d", num)
+	}
+	return strings.Join(stringSlice, str)
+}
+
+func JoinStringInt(a []int, str string) string {
+	stringSlice := make([]string, len(a))
+	for i, num := range a {
+		stringSlice[i] = fmt.Sprintf("%d", num)
+	}
+	return strings.Join(stringSlice, str)
 }
