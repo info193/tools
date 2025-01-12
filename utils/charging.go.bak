@@ -15,17 +15,17 @@ type ChargePeriod struct {
 }
 
 type Charging struct {
-	periods               map[int64]ChargePeriod
-	chargingMode          int64
-	cycleMinute           int64
-	startDiffDuration     int64     // 开始时段相差 分钟
-	endDiffDuration       int64     // 结束时段相差 分钟
-	startDiffTime         string    // 开始差集时间
-	endDiffTime           string    // 结束差集时间
-	startDiffTimeDivision string    // 开始差集时段
-	endDiffTimeDivision   string    // 结束差集时段
-	markStartTime         time.Time // 标记计费开始时间
-	markEndTime           time.Time // 标记计费结束时间
+	periods      map[int64]ChargePeriod
+	chargingMode int64 // 计费方式
+	cycleMinute  int64 // 计费周期
+	//startDiffDuration     int64     // 开始时段相差 分钟
+	//endDiffDuration       int64     // 结束时段相差 分钟
+	//startDiffTime         string    // 开始差集时间
+	//endDiffTime           string    // 结束差集时间
+	//startDiffTimeDivision string    // 开始差集时段
+	//endDiffTimeDivision   string    // 结束差集时段
+	//markStartTime         time.Time // 标记计费开始时间
+	//markEndTime           time.Time // 标记计费结束时间
 }
 
 type periodTimes struct {
@@ -35,6 +35,13 @@ type periodTimes struct {
 	Start     string    `json:"start"`
 	End       string    `json:"end"`
 	Price     float64   `json:"price"`
+}
+
+type offPeriodTimes struct {
+	Index    int     `json:"index"`
+	Price    float64 `json:"price"`
+	Offset   int64   `json:"offset"`
+	Duration int64   `json:"duration"`
 }
 
 type PeriodList struct {
@@ -146,21 +153,22 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[int64]float64
 			}
 		}
 	}
+	//fmt.Println(times, "======")
 	// 1按分钟计费
 	if l.chargingMode == 1 {
 		price, periods, periodList = l.computeMinute(times)
 	}
 	// 2按半小时计费
 	if l.chargingMode == 2 {
-		price, periods, periodList = l.computeHalfHour(times)
+		price, periods, periodList = l.computeHalfHourModeTwo(times)
 	}
 	// 3按小时计费
 	if l.chargingMode == 3 {
-		price, periods, periodList = l.computeHour(times)
+		price, periods, periodList = l.computeHourModeTwo(times)
 	}
 	// 4按半小时计费开台不足半小时按半小时计费，超过半小时按分钟计费
 	if l.chargingMode == 4 {
-		price, periods, periodList = l.computeHalfHourOrMinute(times)
+		price, periods, periodList = l.computeHalfHourOrMinuteModeTwo(times)
 	}
 	// 5按小时计费开台不足1小时按小时计费，超过1小时按分钟计费
 	if l.chargingMode == 5 {
@@ -195,7 +203,7 @@ func (l *Charging) computeMinute(times []periodTimes) (float64, map[int64]float6
 			TotalPrice: totalPrice,
 		})
 	}
-
+	fmt.Println(price, ".....")
 	price, _ = decimal.NewFromFloat(price).RoundFloor(2).Float64()
 	return price, periods, periodList
 }
@@ -213,6 +221,7 @@ func (l *Charging) computeHalfHour(times []periodTimes) (float64, map[int64]floa
 		}
 		var totalPrice float64
 		duration := timeV.EndTime.Sub(timeV.StartTime)
+		//fmt.Println(duration, "....")
 		if duration.Minutes() > 0 {
 			haltHour := decimal.NewFromFloat(duration.Minutes()).Div(decimal.NewFromInt(30)).Ceil().IntPart()
 			maxMinute := decimal.NewFromInt(haltHour).Mul(decimal.NewFromInt(30)).IntPart()
@@ -237,6 +246,224 @@ func (l *Charging) computeHalfHour(times []periodTimes) (float64, map[int64]floa
 			TotalPrice: totalPrice,
 		})
 
+	}
+	price, _ = decimal.NewFromFloat(price).RoundFloor(2).Float64()
+	return price, periods, periodList
+}
+
+// 半小时计费 (半小时为节点，以半小时起始点计算价格，如果时间段内计算时长小于半小时，则累计至下个时段，
+// 并在下个时段内扣除上个时段少于的时间[因为以收半个时段价格]，然后在计算下周期时段价格，依次类推)
+// 如有用户使用优惠券或天次卡不足半小时，则计费方式为分钟计费，如优惠券及天次卡使用完成且用户继续开台，则以优惠券、天次卡时长后开始以半小时计费，跨时段以分钟计费
+func (l *Charging) computeHalfHourModeTwo(times []periodTimes) (float64, map[int64]float64, []*PeriodList) {
+	periods := make(map[int64]float64) // 时段费用详情
+	var price float64
+	var lastDiffMinute int64
+	periodList := make([]*PeriodList, 0)
+	for _, timeV := range times {
+		var totalPrice float64
+		// 差值按分钟计算计费
+		if lastDiffMinute > 0 {
+			lastStartTime := timeV.StartTime.Add(time.Duration(lastDiffMinute) * time.Minute)
+			if lastStartTime.Unix() >= timeV.EndTime.Unix() {
+				lastStartTime = timeV.EndTime
+			}
+			duration := lastStartTime.Sub(timeV.StartTime)
+			totalMinute := decimal.NewFromFloat(duration.Minutes()).IntPart()
+			//fmt.Println(".......-----", lastDiffMinute, duration, totalMinute)
+			if totalMinute > 0 {
+				minutePrice, _ := decimal.NewFromFloat(timeV.Price).Div(decimal.NewFromInt(60)).Float64()
+				minuteTotalPrice, _ := decimal.NewFromInt(totalMinute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
+				totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(minuteTotalPrice)).Float64()
+				timeV.StartTime = lastStartTime
+				//fmt.Println("跨时段按分钟", lastDiffMinute, duration, totalMinute, totalPrice, timeV.StartTime.Format(time.DateTime))
+			}
+		}
+		duration := timeV.EndTime.Sub(timeV.StartTime)
+		totalMinute := decimal.NewFromFloat(duration.Minutes()).IntPart()
+		if totalMinute > 0 {
+			haltHour := decimal.NewFromInt(totalMinute).Div(decimal.NewFromInt(30)).Ceil().IntPart()
+			maxMinute := decimal.NewFromInt(haltHour).Mul(decimal.NewFromInt(30)).IntPart()
+			lastDiffMinute = decimal.NewFromInt(maxMinute).Sub(decimal.NewFromInt(totalMinute)).IntPart()
+			//fmt.Println(lastDiffMinute, "======222")
+			halfHourPrice, _ := decimal.NewFromFloat(timeV.Price).Div(decimal.NewFromInt(2)).Float64()
+
+			//fmt.Println(haltHour, halfHourPrice, lastDiffMinute, 30-lastDiffMinute)
+			//fmt.Println(timeV.StartTime.Add(time.Duration(maxMinute)*time.Minute).Format(time.DateTime), "mmmmm", maxMinute)
+			//if timeV.StartTime.Add(time.Duration(maxMinute)*time.Minute).Format("15:04") > timeV.End {
+			//	fmt.Println("跨时段", maxMinute)
+			//} else {
+			//	fmt.Println("未跨时段")
+			//}
+
+			// 开始时间大于结束时间 跨天
+			if timeV.Start > timeV.End {
+				// 跨时段
+				if timeV.StartTime.Add(time.Duration(maxMinute)*time.Minute).Format("15:04") >= timeV.End && lastDiffMinute != 0 {
+					//minute := decimal.NewFromInt(30).Sub(decimal.NewFromInt(lastDiffMinute)).IntPart()
+
+					if totalMinute < 30 && timeV.EndTime.Format("15:04") < timeV.End {
+						totalHourPrice, _ := decimal.NewFromFloat(halfHourPrice).Mul(decimal.NewFromInt(haltHour)).Float64()
+						totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+						fmt.Println("不足半小时按半小时算", totalPrice)
+					} else {
+						minute := decimal.NewFromInt(30).Sub(decimal.NewFromInt(lastDiffMinute)).IntPart()
+						minutePrice, _ := decimal.NewFromFloat(timeV.Price).Div(decimal.NewFromInt(60)).Float64()
+						minuteTotalPrice, _ := decimal.NewFromInt(minute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
+
+						totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(minuteTotalPrice)).Float64()
+						totalHourPrice, _ := decimal.NewFromFloat(halfHourPrice).Mul(decimal.NewFromInt(haltHour - 1)).Float64()
+						totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+					}
+					//if timeV.EndTime.Format("15:04") == timeV.End {
+					//fmt.Println("跨时段 大于半小时", totalPrice, lastDiffMinute)
+					//} else {
+					//	totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(halfHourPrice)).Float64()
+					//	fmt.Println("跨时段 小于半小时", totalPrice, lastDiffMinute)
+					//}
+					//lastDiffMinute = 0
+					//fmt.Println("跨时段1", minuteTotalPrice, totalPrice, lastDiffMinute)
+					// 未跨时段
+					//} else if timeV.StartTime.Add(time.Duration(maxMinute)*time.Minute).Format("15:04") >= timeV.End && lastDiffMinute != 0 && totalMinute < 30 {
+					//	//minute := decimal.NewFromInt(30).Sub(decimal.NewFromInt(lastDiffMinute)).IntPart()
+					//	//minutePrice, _ := decimal.NewFromFloat(timeV.Price).Div(decimal.NewFromInt(60)).Float64()
+					//	//minuteTotalPrice, _ := decimal.NewFromInt(minute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
+					//	totalHourPrice, _ := decimal.NewFromFloat(halfHourPrice).Mul(decimal.NewFromInt(haltHour - 1)).Float64()
+					//	totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+					//	totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(minuteTotalPrice)).Float64()
+					//	//lastDiffMinute = 0
+					//	fmt.Println("跨时段", minuteTotalPrice, totalPrice, lastDiffMinute)
+				} else {
+					totalHourPrice, _ := decimal.NewFromFloat(halfHourPrice).Mul(decimal.NewFromInt(haltHour)).Float64()
+					//fmt.Println("未跨时段", totalPrice)
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+				}
+			} else {
+				//fmt.Println(haltHour, halfHourPrice, lastDiffMinute, 30-lastDiffMinute)
+				//fmt.Println("-----000", timeV)
+				if timeV.StartTime.Add(time.Duration(maxMinute)*time.Minute).Format("15:04") >= timeV.End && lastDiffMinute != 0 {
+					minute := decimal.NewFromInt(30).Sub(decimal.NewFromInt(lastDiffMinute)).IntPart()
+					minutePrice, _ := decimal.NewFromFloat(timeV.Price).Div(decimal.NewFromInt(60)).Float64()
+					minuteTotalPrice, _ := decimal.NewFromInt(minute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
+					//fmt.Println(minute, minutePrice, minuteTotalPrice, ".........1111=====")
+					totalHourPrice, _ := decimal.NewFromFloat(halfHourPrice).Mul(decimal.NewFromInt(haltHour - 1)).Float64()
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(minuteTotalPrice)).Float64()
+				} else {
+					totalHourPrice, _ := decimal.NewFromFloat(halfHourPrice).Mul(decimal.NewFromInt(haltHour)).Float64()
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+					//fmt.Println("未跨时段 当日", halfHourPrice, haltHour, totalPrice)
+				}
+			}
+
+			price += totalPrice
+			periods[int64(timeV.Index)] += totalPrice
+		} else {
+			//fmt.Println("---11")
+			periods[int64(timeV.Index)] += 0
+		}
+		//fmt.Println(price, "......////")
+		periodList = append(periodList, &PeriodList{
+			StartTime:  timeV.StartTime.Format("2006-01-02 15:04"),
+			EndTime:    timeV.EndTime.Format("2006-01-02 15:04"),
+			Index:      timeV.Index,
+			Duration:   totalMinute,
+			Start:      timeV.Start,
+			End:        timeV.End,
+			Price:      timeV.Price,
+			TotalPrice: totalPrice,
+		})
+
+	}
+	//fmt.Println(price, "..----,,,")
+	price, _ = decimal.NewFromFloat(price).RoundFloor(2).Float64()
+	return price, periods, periodList
+}
+
+// 一小时计费 (一小时为节点，以半小时起始点计算价格，如果时间段内计算时长小于半小时，则累计至下个时段，
+// 并在下个时段内扣除上个时段少于的时间[因为以收一个时段价格]，然后在计算下周期时段价格，依次类推)
+// 如有用户使用优惠券或天次卡不足一小时，则计费方式为分钟计费，如优惠券及天次卡使用完成且用户继续开台，则以优惠券、天次卡时长后开始以一小时计费，跨时段以分钟计费
+func (l *Charging) computeHourModeTwo(times []periodTimes) (float64, map[int64]float64, []*PeriodList) {
+	periods := make(map[int64]float64) // 时段费用详情
+	var price float64
+	var lastDiffMinute int64
+	periodList := make([]*PeriodList, 0)
+	for _, timeV := range times {
+		var totalPrice float64
+		if lastDiffMinute > 0 {
+			lastStartTime := timeV.StartTime.Add(time.Duration(lastDiffMinute) * time.Minute)
+			duration := lastStartTime.Sub(timeV.StartTime)
+			totalMinute := decimal.NewFromFloat(duration.Minutes()).IntPart()
+			//fmt.Println(".......-----", lastDiffMinute, duration, totalMinute)
+			if totalMinute > 0 {
+				minutePrice, _ := decimal.NewFromFloat(timeV.Price).Div(decimal.NewFromInt(60)).Float64()
+				minuteTotalPrice, _ := decimal.NewFromInt(totalMinute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
+				totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(minuteTotalPrice)).Float64()
+				timeV.StartTime = timeV.StartTime.Add(time.Duration(lastDiffMinute) * time.Minute)
+				//fmt.Println("跨时段按分钟", lastDiffMinute, duration, totalMinute, totalPrice, timeV.StartTime.Format(time.DateTime))
+			}
+		}
+
+		duration := timeV.EndTime.Sub(timeV.StartTime)
+		totalMinute := decimal.NewFromFloat(duration.Minutes()).IntPart()
+		if totalMinute > 0 {
+			hour := decimal.NewFromFloat(duration.Minutes()).Div(decimal.NewFromInt(60)).Ceil().IntPart()
+			maxMinute := decimal.NewFromInt(hour).Mul(decimal.NewFromInt(60)).IntPart()
+			lastDiffMinute = decimal.NewFromInt(maxMinute).Sub(decimal.NewFromInt(totalMinute)).IntPart()
+
+			//totalPrice, _ = decimal.NewFromFloat(timeV.Price).Mul(decimal.NewFromInt(hour)).Float64()
+
+			// 开始时间大于结束时间 跨天
+			if timeV.Start > timeV.End {
+				// 跨时段
+				if timeV.StartTime.Add(time.Duration(maxMinute)*time.Minute).Format("15:04") >= timeV.End && lastDiffMinute != 0 {
+					minute := decimal.NewFromInt(60).Sub(decimal.NewFromInt(lastDiffMinute)).IntPart()
+					minutePrice, _ := decimal.NewFromFloat(timeV.Price).Div(decimal.NewFromInt(60)).Float64()
+					minuteTotalPrice, _ := decimal.NewFromInt(minute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
+					totalHourPrice, _ := decimal.NewFromFloat(timeV.Price).Mul(decimal.NewFromInt(hour - 1)).Float64()
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(minuteTotalPrice)).Float64()
+					//lastDiffMinute = 0
+					//fmt.Println("跨时段", minuteTotalPrice, totalPrice, lastDiffMinute)
+					// 未跨时段
+				} else {
+					totalHourPrice, _ := decimal.NewFromFloat(timeV.Price).Mul(decimal.NewFromInt(hour)).Float64()
+					//fmt.Println("未跨时段", totalPrice)
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+				}
+			} else {
+				//fmt.Println(haltHour, halfHourPrice, lastDiffMinute, 30-lastDiffMinute)
+				//fmt.Println("-----000", timeV)
+				if timeV.StartTime.Add(time.Duration(maxMinute)*time.Minute).Format("15:04") >= timeV.End && lastDiffMinute != 0 {
+					minute := decimal.NewFromInt(60).Sub(decimal.NewFromInt(lastDiffMinute)).IntPart()
+					minutePrice, _ := decimal.NewFromFloat(timeV.Price).Div(decimal.NewFromInt(60)).Float64()
+					minuteTotalPrice, _ := decimal.NewFromInt(minute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
+					//fmt.Println(minute, minutePrice, minuteTotalPrice, ".........1111=====")
+
+					totalHourPrice, _ := decimal.NewFromFloat(timeV.Price).Mul(decimal.NewFromInt(hour - 1)).Float64()
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(minuteTotalPrice)).Float64()
+				} else {
+					totalHourPrice, _ := decimal.NewFromFloat(timeV.Price).Mul(decimal.NewFromInt(hour)).Float64()
+					totalPrice, _ = decimal.NewFromFloat(totalPrice).Add(decimal.NewFromFloat(totalHourPrice)).Float64()
+					//fmt.Println("未跨时段 当日", halfHourPrice, haltHour, totalPrice)
+				}
+			}
+
+			price += totalPrice
+			periods[int64(timeV.Index)] += totalPrice
+		} else {
+			periods[int64(timeV.Index)] += 0
+		}
+		periodList = append(periodList, &PeriodList{
+			StartTime:  timeV.StartTime.Format("2006-01-02 15:04"),
+			EndTime:    timeV.EndTime.Format("2006-01-02 15:04"),
+			Index:      timeV.Index,
+			Duration:   decimal.NewFromFloat(duration.Minutes()).IntPart(),
+			Start:      timeV.Start,
+			End:        timeV.End,
+			Price:      timeV.Price,
+			TotalPrice: totalPrice,
+		})
 	}
 	price, _ = decimal.NewFromFloat(price).RoundFloor(2).Float64()
 	return price, periods, periodList
@@ -375,7 +602,6 @@ func (l *Charging) computeHourOrMinute(times []periodTimes) (float64, map[int64]
 			Price:      timeV.Price,
 			TotalPrice: totalPrice,
 		})
-
 	}
 	price, _ = decimal.NewFromFloat(price).RoundFloor(2).Float64()
 	return price, periods, periodList
