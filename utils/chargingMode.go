@@ -7,6 +7,57 @@ import (
 	"time"
 )
 
+// 收费时段设置
+type ChargePeriodAssembly struct {
+	Week    *ChargePeriodSetWeek    `json:"week"`    // 星期
+	Holiday *ChargePeriodSetHoliday `json:"holiday"` // 节假日
+	Hour    *ChargePeriodSetHour    `json:"hour"`    // 小时收费时段
+}
+
+// 星期
+type ChargePeriodSetWeek struct {
+	Week       []int64                 `json:"week"`        // 星期
+	Hour       []CPHour                `json:"hour"`        // 收费时段
+	HourPeak   []CPHour                `json:"hour_peak"`   // 时段封顶
+	HourStairs []HourStairs            `json:"hour_stairs"` // 时段阶梯
+	MinConsume *ChargePeriodMinConsume `json:"min_consume"`
+}
+
+// 小时收费时段
+type ChargePeriodSetHour struct {
+	Hour       []CPHour                `json:"hour"`        // 收费时段
+	HourPeak   []CPHour                `json:"hour_peak"`   // 时段封顶
+	HourStairs []HourStairs            `json:"hour_stairs"` // 时段阶梯
+	MinConsume *ChargePeriodMinConsume `json:"min_consume"`
+}
+
+type ChargePeriodMinConsume struct {
+	StartNoFeeTime int64  `json:"start_no_fee_time"`
+	Idle           string `json:"idle"`
+	Member         string `json:"member"`
+}
+type CPHour struct {
+	Start       int64  `json:"start"`
+	End         int64  `json:"end"`
+	IdlePrice   string `json:"idle_price"`
+	MemberPrice string `json:"member_price"`
+}
+
+type HourStairs struct {
+	Index       int64  `json:"index"`
+	IdlePrice   string `json:"idle_price"`
+	MemberPrice string `json:"member_price"`
+}
+
+// 节假日
+type ChargePeriodSetHoliday struct {
+	Date       [][]string               `json:"date"`        // 星期
+	Hour       [][]CPHour               `json:"hour"`        // 收费时段
+	HourPeak   [][]CPHour               `json:"hour_peak"`   // 时段封顶
+	HourStairs [][]HourStairs           `json:"hour_stairs"` // 时段阶梯
+	MinConsume []ChargePeriodMinConsume `json:"min_consume"`
+}
+
 type ChargePeriod struct {
 	StartPeriod int64   `json:"start_period"`
 	EndPeriod   int64   `json:"end_period"`
