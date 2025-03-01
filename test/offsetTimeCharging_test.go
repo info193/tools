@@ -1,8 +1,6 @@
 package test
 
 import (
-	"fmt"
-	"github.com/info193/tools/utils"
 	"testing"
 )
 
@@ -10,16 +8,16 @@ func TestOffsetTimeCharging(t *testing.T) {
 
 	//   测试，已废弃
 	//day24HourPeriod := map[int64]string{0: "00:00", 1: "01:00", 2: "02:00", 3: "03:00", 4: "04:00", 5: "05:00", 6: "06:00", 7: "07:00", 8: "08:00", 9: "09:00", 10: "10:00", 11: "11:00", 12: "12:00", 13: "13:00", 14: "14:00", 15: "15:00", 16: "16:00", 17: "17:00", 18: "18:00", 19: "19:00", 20: "20:00", 21: "21:00", 22: "22:00", 23: "23:00", 24: "24:00"}
-	periods := make(map[int64]utils.ChargePeriod, 0)
-	periods[0] = utils.ChargePeriod{EndPeriod: 10, StartPeriod: 5, End: "10:00", Start: "05:00", Price: 5.00}
-	periods[1] = utils.ChargePeriod{EndPeriod: 15, StartPeriod: 10, End: "15:00", Start: "10:00", Price: 8.00}
-	periods[2] = utils.ChargePeriod{EndPeriod: 22, StartPeriod: 15, End: "22:00", Start: "15:00", Price: 6.00}
-	periods[3] = utils.ChargePeriod{EndPeriod: 05, StartPeriod: 22, End: "05:00", Start: "22:00", Price: 12.00}
-	price, periodAll, periodList := utils.NewChargeMode(periods, 2, 0).Outlay("2024-10-30 05:20", "2024-10-30 15:10")
-	fmt.Println(price, periodAll, periodList)
-	for _, value := range periodList {
-		fmt.Println(value.StartTime, value.EndTime, value.Price, value.TotalPrice)
-	}
+	//periods := make(map[int64]utils.ChargePeriod, 0)
+	//periods[0] = utils.ChargePeriod{EndPeriod: 10, StartPeriod: 5, End: "10:00", Start: "05:00", Price: 5.00}
+	//periods[1] = utils.ChargePeriod{EndPeriod: 15, StartPeriod: 10, End: "15:00", Start: "10:00", Price: 8.00}
+	//periods[2] = utils.ChargePeriod{EndPeriod: 22, StartPeriod: 15, End: "22:00", Start: "15:00", Price: 6.00}
+	//periods[3] = utils.ChargePeriod{EndPeriod: 05, StartPeriod: 22, End: "05:00", Start: "22:00", Price: 12.00}
+	//price, periodAll, periodList := utils.NewChargeMode(periods, 2, 0).Outlay("2024-10-30 05:20", "2024-10-30 15:10")
+	//fmt.Println(price, periodAll, periodList)
+	//for _, value := range periodList {
+	//	fmt.Println(value.StartTime, value.EndTime, value.Price, value.TotalPrice)
+	//}
 	//fmt.Println("1元", decimal.NewFromInt(1).Div(decimal.NewFromInt(60)), decimal.NewFromInt(1).Div(decimal.NewFromInt(60)).Mul(decimal.NewFromInt(30)).Round(2))
 	//fmt.Println("2元", decimal.NewFromInt(2).Div(decimal.NewFromInt(60)), decimal.NewFromInt(2).Div(decimal.NewFromInt(60)).Mul(decimal.NewFromInt(30)).Round(2))
 	//fmt.Println("3元", decimal.NewFromInt(3).Div(decimal.NewFromInt(60)), decimal.NewFromInt(3).Div(decimal.NewFromInt(60)).Mul(decimal.NewFromInt(30)).Round(2))
