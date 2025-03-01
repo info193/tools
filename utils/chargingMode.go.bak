@@ -14,6 +14,13 @@ type ChargePeriodAssembly struct {
 	Hour    *ChargePeriodSetHour    `json:"hour"`    // 小时收费时段
 }
 
+// 收费时段设置
+type ChargeMap struct {
+	StartDate string
+	EndDate   string
+	Charge    interface{}
+}
+
 // 星期
 type ChargePeriodSetWeek struct {
 	Week       []int64                 `json:"week"`        // 星期
@@ -67,7 +74,8 @@ type ChargePeriod struct {
 }
 
 type Charging struct {
-	periods      map[int64]ChargePeriod
+	periods map[int64]ChargePeriod
+	//periods      ChargePeriodAssembly
 	chargingMode int64 // 计费方式
 	cycleMinute  int64 // 计费周期
 }
