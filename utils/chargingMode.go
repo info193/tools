@@ -16,13 +16,6 @@ type ChargePeriodAssembly struct {
 	HourStairs []HourStairs            `json:"hour_stairs"` // 阶梯计费
 }
 
-// 收费时段设置
-type ChargeMap struct {
-	StartDate string
-	EndDate   string
-	Charge    interface{}
-}
-
 // 星期
 type ChargePeriodSetWeek struct {
 	Week       []int64                 `json:"week"`      // 星期
@@ -36,6 +29,14 @@ type ChargePeriodSetHour struct {
 	Hour       []CPHour                `json:"hour"`      // 收费时段
 	HourPeak   []CPHour                `json:"hour_peak"` // 时段封顶
 	MinConsume *ChargePeriodMinConsume `json:"min_consume"`
+}
+
+// 节假日
+type ChargePeriodSetHoliday struct {
+	Date       [][]string               `json:"date"`      // 星期
+	Hour       [][]CPHour               `json:"hour"`      // 收费时段
+	HourPeak   [][]CPHour               `json:"hour_peak"` // 时段封顶
+	MinConsume []ChargePeriodMinConsume `json:"min_consume"`
 }
 
 type ChargePeriodMinConsume struct {
@@ -58,22 +59,14 @@ type HourStairs struct {
 	MemberPrice string `json:"member_price"`
 }
 
-// 节假日
-type ChargePeriodSetHoliday struct {
-	Date       [][]string               `json:"date"`      // 星期
-	Hour       [][]CPHour               `json:"hour"`      // 收费时段
-	HourPeak   [][]CPHour               `json:"hour_peak"` // 时段封顶
-	MinConsume []ChargePeriodMinConsume `json:"min_consume"`
-}
-
 type ChargePeriod struct {
-	StartPeriod int64                   `json:"start_period"`
-	EndPeriod   int64                   `json:"end_period"`
-	Start       string                  `json:"start"`
-	End         string                  `json:"end"`
-	Price       float64                 `json:"price"`
-	HourPeak    *[]CPHour               `json:"hour_peak"` // 时段封顶
-	MinConsume  *ChargePeriodMinConsume `json:"min_consume"`
+	StartPeriod int64   `json:"start_period"`
+	EndPeriod   int64   `json:"end_period"`
+	Start       string  `json:"start"`
+	End         string  `json:"end"`
+	Price       float64 `json:"price"`
+	//HourPeak    *[]CPHour               `json:"hour_peak"` // 时段封顶
+	//MinConsume  *ChargePeriodMinConsume `json:"min_consume"`
 }
 
 type Charging struct {
@@ -92,20 +85,9 @@ type periodTimes struct {
 	End       string    `json:"end"`
 	Price     float64   `json:"price"`
 
-	HourPeak *[]CPHour `json:"hour_peak"` // 时段封顶
-	//HourStairs *[]HourStairs           `json:"hour_stairs"` // 时段阶梯
-	MinConsume *ChargePeriodMinConsume `json:"min_consume"`
-}
-
-type PeriodList struct {
-	StartTime  string  `json:"start_time"`
-	EndTime    string  `json:"end_time"`
-	Index      int     `json:"index"`
-	Duration   int64   `json:"duration"`
-	Start      string  `json:"start"`
-	End        string  `json:"end"`
-	Price      float64 `json:"price"`
-	TotalPrice float64 `json:"total_price"`
+	//HourPeak *[]CPHour `json:"hour_peak"` // 时段封顶
+	////HourStairs *[]HourStairs           `json:"hour_stairs"` // 时段阶梯
+	//MinConsume *ChargePeriodMinConsume `json:"min_consume"`
 }
 
 type HourPeriodList struct {
@@ -147,103 +129,6 @@ func (l *Charging) fillTime(startDateTime, endDateTime time.Time) time.Time {
 	}
 	return endDateTime
 }
-
-//func (l *Charging) getCharge(startDateTime time.Time, endDateTime time.Time) {
-//	tempEndDate := startDateTime
-//	tempStartTime := startDateTime
-//	var chargePeriodSetWeek *ChargePeriodSetWeek
-//	var chargePeriodSetHoliday *ChargePeriodSetHoliday
-//	var chargePeriodSetHour *ChargePeriodSetHour
-//	charge := make(map[int]ChargeMap)
-//	// 节假日
-//	if l.periods.Holiday != nil {
-//		isOk := 0
-//		currentTime := startDateTime
-//		for {
-//			if tempStartTime.Format("2006-01-02") <= endDateTime.Format("2006-01-02") {
-//				startDate := tempStartTime.Format("01-02")
-//				for _, value := range l.periods.Holiday.Date {
-//					if ContainsSliceString(value, startDate) {
-//						tempEndDate, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 23:59", tempStartTime.Format("2006-01-02")), time.Local)
-//						if tempEndDate.Unix() >= endDateTime.Unix() {
-//							tempEndDate = endDateTime
-//							isOk = 1
-//						}
-//						//fmt.Println(tempEndDate.Format(time.DateTime), "开始时间存在节假日")
-//						//fmt.Println(fmt.Sprintf("%s 23:59", startDateTime.Format("2006-01-02")))
-//						//fmt.Println(startDateTime.Format(time.DateTime), "开始时间存在节假日")
-//						continue
-//					}
-//				}
-//				tempStartTime = tempStartTime.Add(86400 * time.Second)
-//				//fmt.Println(tempEndDate.Format(time.DateTime))
-//			} else {
-//				break
-//			}
-//		}
-//		tempStartTime = tempEndDate.Add(1 * time.Minute)
-//		if isOk == 1 {
-//			chargePeriodSetHoliday = l.periods.Holiday
-//			charge[1] = ChargeMap{
-//				StartDate: currentTime.Format("2006-01-02 15:04"),
-//				EndDate:   tempEndDate.Format("2006-01-02 15:04"),
-//				Charge:    chargePeriodSetHoliday,
-//			}
-//		}
-//
-//		//fmt.Println("======1", currentTime.Format(time.DateTime), tempEndDate.Format(time.DateTime))
-//	}
-//
-//	// 星期
-//	if tempStartTime.Unix() <= endDateTime.Unix() && l.periods.Week != nil {
-//		currentTime := tempStartTime
-//		isOk := 0
-//		for {
-//			if tempStartTime.Format("2006-01-02") <= endDateTime.Format("2006-01-02") {
-//				startDay := int64(tempStartTime.Weekday())
-//				if startDay == 0 {
-//					startDay = 7
-//				}
-//				if l.periods.Week != nil && ContainsSliceInt64(l.periods.Week.Week, startDay) {
-//					//fmt.Println(tempStartTime.Format(time.DateTime), "开始时间存在星期")
-//					tempEndDate, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 23:59", tempStartTime.Format("2006-01-02")), time.Local)
-//					if tempEndDate.Unix() >= endDateTime.Unix() {
-//						isOk = 1
-//						tempEndDate = endDateTime
-//					}
-//				}
-//				tempStartTime = tempStartTime.Add(86400 * time.Second)
-//			} else {
-//				break
-//			}
-//		}
-//		//fmt.Println("======2", currentTime.Format(time.DateTime), tempEndDate.Format(time.DateTime))
-//		tempStartTime = tempEndDate.Add(1 * time.Minute)
-//		if isOk == 1 {
-//			chargePeriodSetWeek = l.periods.Week
-//			charge[2] = ChargeMap{
-//				StartDate: currentTime.Format("2006-01-02 15:04"),
-//				EndDate:   tempEndDate.Format("2006-01-02 15:04"),
-//				Charge:    chargePeriodSetWeek,
-//			}
-//		}
-//
-//	}
-//
-//	// 小时
-//	if tempStartTime.Unix() <= endDateTime.Unix() && l.periods.Hour != nil {
-//		currentTime := tempStartTime
-//		tempEndDate = endDateTime
-//		chargePeriodSetHour = l.periods.Hour
-//		//fmt.Println("======3", currentTime.Format(time.DateTime), tempEndDate.Format(time.DateTime))
-//		charge[3] = ChargeMap{
-//			StartDate: currentTime.Format("2006-01-02 15:04"),
-//			EndDate:   tempEndDate.Format("2006-01-02 15:04"),
-//			Charge:    chargePeriodSetHour,
-//		}
-//	}
-//	fmt.Println(charge)
-//}
 
 // 需注意：不管是否是跨日还是当日，开始时间不能为24，已0开始。
 // 当日可以有24点,跨日不能出现24点，已0点开始。
@@ -305,10 +190,10 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[string]HourPe
 									//if hour.End == 24 {
 									//	end = "23:59"
 									//}
-									var hourPeak *[]CPHour
-									if len(l.periods.Holiday.HourPeak[index]) >= 1 {
-										hourPeak = &l.periods.Holiday.HourPeak[index]
-									}
+									//var hourPeak *[]CPHour
+									//if len(l.periods.Holiday.HourPeak[index]) >= 1 {
+									//	hourPeak = &l.periods.Holiday.HourPeak[index]
+									//}
 									//fmt.Println("=====", hourPeak)
 									//var hourStairs *[]HourStairs
 									//if len(l.periods.Holiday.HourStairs[index]) >= 1 {
@@ -316,15 +201,15 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[string]HourPe
 									//	//hourStairs = &l.periods.Holiday.HourStairs[index]
 									//	hourStairsArr[currentTime.Format("2006-01-02")] = l.periods.Holiday.HourStairs[index]
 									//}
-									var minConsume *ChargePeriodMinConsume
-									if index >= 0 && index < len(l.periods.Holiday.MinConsume) {
-										minConsume = &l.periods.Holiday.MinConsume[index]
-									}
-
+									//var minConsume *ChargePeriodMinConsume
+									//if index >= 0 && index < len(l.periods.Holiday.MinConsume) {
+									//	minConsume = &l.periods.Holiday.MinConsume[index]
+									//}
+									///////////////////////////////////////////////
 									//fmt.Println(l.periods.Holiday.HourPeak[index], "------")
 									//fmt.Println(l.periods.Holiday.HourStairs[index], "======")
 									//fmt.Println(l.periods.Holiday.MinConsume[index], "???????")
-									hours[ind] = ChargePeriod{StartPeriod: hour.Start, EndPeriod: hour.End, Start: start, End: end, Price: hourPrice, HourPeak: hourPeak, MinConsume: minConsume}
+									hours[ind] = ChargePeriod{StartPeriod: hour.Start, EndPeriod: hour.End, Start: start, End: end, Price: hourPrice}
 								}
 								//fmt.Println("节假日在范围内", hours)
 								continue
@@ -364,21 +249,21 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[string]HourPe
 						//if hour.End == 24 {
 						//	end = "23:59"
 						//}
-						var hourPeak *[]CPHour
-						if len(l.periods.Week.HourPeak) >= 1 {
-							hourPeak = &l.periods.Week.HourPeak
-						}
+						//var hourPeak *[]CPHour
+						//if len(l.periods.Week.HourPeak) >= 1 {
+						//	hourPeak = &l.periods.Week.HourPeak
+						//}
 						//var hourStairs *[]HourStairs
 						//if len(l.periods.Week.HourStairs) >= 1 {
 						//	isHourStairs = 1
 						//	hourStairsArr[currentTime.Format("2006-01-02")] = l.periods.Week.HourStairs
 						//	hourStairs = &l.periods.Week.HourStairs
 						//}
-						var minConsume *ChargePeriodMinConsume
-						if l.periods.Week.MinConsume != nil {
-							minConsume = l.periods.Week.MinConsume
-						}
-						hours[ind] = ChargePeriod{StartPeriod: hour.Start, EndPeriod: hour.End, Start: start, End: end, Price: hourPrice, HourPeak: hourPeak, MinConsume: minConsume}
+						//var minConsume *ChargePeriodMinConsume
+						//if l.periods.Week.MinConsume != nil {
+						//	minConsume = l.periods.Week.MinConsume
+						//}
+						hours[ind] = ChargePeriod{StartPeriod: hour.Start, EndPeriod: hour.End, Start: start, End: end, Price: hourPrice}
 					}
 
 					//fmt.Println(tempStartTime.Format(time.DateTime), "开始时间存在星期")
@@ -409,23 +294,23 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[string]HourPe
 					if hour.End == 24 {
 						end = "23:59"
 					}
-					var hourPeak *[]CPHour
-					if len(l.periods.Hour.HourPeak) >= 1 {
-						hourPeak = &l.periods.Hour.HourPeak
-					}
+					//var hourPeak *[]CPHour
+					//if len(l.periods.Hour.HourPeak) >= 1 {
+					//	hourPeak = &l.periods.Hour.HourPeak
+					//}
 					//var hourStairs *[]HourStairs
 					//if len(l.periods.Hour.HourStairs) >= 1 {
 					//	isHourStairs = 1
 					//	hourStairsArr[currentTime.Format("2006-01-02")] = l.periods.Hour.HourStairs
 					//	hourStairs = &l.periods.Hour.HourStairs
 					//}
-					var minConsume *ChargePeriodMinConsume
-					if l.periods.Hour.MinConsume != nil {
-						minConsume = l.periods.Hour.MinConsume
-					}
-					hours[ind] = ChargePeriod{StartPeriod: hour.Start, EndPeriod: hour.End, Start: start, End: end, Price: hourPrice, HourPeak: hourPeak, MinConsume: minConsume}
+					//var minConsume *ChargePeriodMinConsume
+					//if l.periods.Hour.MinConsume != nil {
+					//	minConsume = l.periods.Hour.MinConsume
+					//}
+					hours[ind] = ChargePeriod{StartPeriod: hour.Start, EndPeriod: hour.End, Start: start, End: end, Price: hourPrice}
 				}
-				fmt.Println("小时在范围内")
+				//fmt.Println("小时在范围内")
 			}
 			//fmt.Println(hours, "....|||||||||...")
 			//fmt.Println(tempCurrentTime.Format(time.DateTime), count)
@@ -508,11 +393,11 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[string]HourPe
 
 					if currentTime.Unix() >= periodStartTime.Unix() && currentTime.Unix() <= periodEndTime.Unix() {
 						if currentTime.Unix() < periodEndTime.Unix() && periodEndTime.Unix() < endDateTime.Unix() {
-							times = append(times, periodTimes{StartTime: currentTime, EndTime: periodEndTime, Index: i, Start: period.Start, End: period.End, Price: period.Price, HourPeak: period.HourPeak, MinConsume: period.MinConsume})
+							times = append(times, periodTimes{StartTime: currentTime, EndTime: periodEndTime, Index: i, Start: period.Start, End: period.End, Price: period.Price})
 						}
 						// 判断时段结束时间 大于 传入的结束时间 则赋值且跳出
 						if endDateTime.Unix() <= periodEndTime.Unix() {
-							times = append(times, periodTimes{StartTime: currentTime, EndTime: endDateTime, Index: i, Start: period.Start, End: period.End, Price: period.Price, HourPeak: period.HourPeak, MinConsume: period.MinConsume})
+							times = append(times, periodTimes{StartTime: currentTime, EndTime: endDateTime, Index: i, Start: period.Start, End: period.End, Price: period.Price})
 							currentTime = endDateTime
 							break
 						}
@@ -533,10 +418,10 @@ func (l *Charging) Outlay(startDate, endDate string) (float64, map[string]HourPe
 
 						if currentTime.Unix() == periodEndTime.Unix() && periodEndTime.Unix() < endDateTime.Unix() {
 							if end == 1 {
-								times = append(times, periodTimes{StartTime: currentTime, EndTime: endDateTime, Index: i, Start: period.Start, End: period.End, Price: period.Price, HourPeak: period.HourPeak, MinConsume: period.MinConsume})
+								times = append(times, periodTimes{StartTime: currentTime, EndTime: endDateTime, Index: i, Start: period.Start, End: period.End, Price: period.Price})
 								currentTime = endDateTime
 							} else if currentTime.Unix() != periodEndTime.Unix() {
-								times = append(times, periodTimes{StartTime: currentTime, EndTime: periodEndTime, Index: i, Start: period.Start, End: period.End, Price: period.Price, HourPeak: period.HourPeak, MinConsume: period.MinConsume})
+								times = append(times, periodTimes{StartTime: currentTime, EndTime: periodEndTime, Index: i, Start: period.Start, End: period.End, Price: period.Price})
 								currentTime = periodEndTime
 							}
 							continue
@@ -970,7 +855,6 @@ func (l *Charging) stairs(startDateTime, endDateTime time.Time, stairs []HourSta
 				Price:     totalPrice,
 			}
 			tempCreateTime = tempCurrentTime
-
 			// 立邦、三棵树、多乐士 水性漆
 			price += totalPrice
 		}
@@ -2945,38 +2829,66 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 	return price, allHourPeriodList
 }
 
-//
-//func (l *Charging) sortPeriods() []int {
-//	// 将 map 的键放入切片
-//	keys := make([]int, 0, len(l.periods))
-//	for k := range l.periods {
-//		keys = append(keys, int(k))
+//func (l *Charging) sortPeriods(currentDate time.Time) *PeriodChild {
+//	// 节假日
+//	if l.periods.Holiday != nil {
+//		for index, val := range l.periods.Holiday.Date {
+//			if ContainsSliceString(val, currentDate.Format("15:04")) {
+//				return &PeriodChild{Hour: l.periods.Holiday.Hour[index], HourPeak: l.periods.Holiday.HourPeak[index]}
+//			}
+//		}
 //	}
-//	// 对键切片进行排序
-//	sort.Ints(keys)
-//	return keys
+//	// 星期
+//	if l.periods.Week != nil {
+//		startDay := int64(currentDate.Weekday())
+//		if startDay == 0 {
+//			startDay = 7
+//		}
+//		if ContainsSliceInt64(l.periods.Week.Week, startDay) {
+//			return &PeriodChild{Hour: l.periods.Week.Hour, HourPeak: l.periods.Week.HourPeak}
+//		}
+//	}
+//	// 小时
+//	if l.periods.Hour != nil {
+//		return &PeriodChild{Hour: l.periods.Hour.Hour, HourPeak: l.periods.Hour.HourPeak}
+//	}
+//	return nil
 //}
-//
-//// 金额算出会有误差，具体以结束计算为准(分钟)
+
+// 金额算出会有误差，具体以结束计算为准(分钟)
 //func (l *Charging) moneyTransferMinuteTime(money float64, startDate string) (string, string, []*PeriodList) {
 //	currentTime, _ := time.ParseInLocation("2006-01-02 15:04", startDate, time.Local)
 //	var lastEndTime time.Time
 //	totalMoney := money
 //	periodList := make([]*PeriodList, 0)
-//
+//	lastEndTime = currentTime
 //	// 将 map 的键放入切片
-//	periods := l.sortPeriods()
-//
 //	for {
 //		if totalMoney <= 0 {
 //			//fmt.Println("跳出循环")
 //			break
 //		}
+//		periods := l.sortPeriods(lastEndTime)
+//
 //		var periodEndTime time.Time
 //		var duration time.Duration
-//
-//		for _, index := range periods {
-//			period := l.periods[int64(index)]
+//		for index, period := range periods.Hour {
+//			var hourTotalMoney float64
+//			endStr := fmt.Sprintf("%v:00", period.End)
+//			if period.End < 10 {
+//				endStr = fmt.Sprintf("0%v:00", period.End)
+//			}
+//			startStr := fmt.Sprintf("%v:00", period.Start)
+//			if period.Start < 10 {
+//				startStr = fmt.Sprintf("0%v:00", period.Start)
+//			}
+//			var tempPrice float64
+//			tempPrice, _ = strconv.ParseFloat(period.IdlePrice, 10)
+//			if l.member == 1 {
+//				tempPrice, _ = strconv.ParseFloat(period.MemberPrice, 10)
+//			}
+//			//for _, index := range periods {
+//			//	period := l.periods[int64(index)]
 //			//}
 //			//for id, period := range l.periods {
 //			//	fmt.Println("~~~~~~~~~~~~~~", id, period.Start, period.End)
@@ -2985,11 +2897,11 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //			if totalMoney <= 0 {
 //				continue
 //			}
-//			if currentTime.Format("15:04") == period.End {
+//			if currentTime.Format("15:04") == endStr {
 //				//fmt.Println("跳过本次日期", currentTime.Format(time.DateTime), period.End, period.Start)
 //				continue
 //			}
-//			minutePrice, _ = decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(60)).Float64()
+//			minutePrice, _ = decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(60)).Float64()
 //			totalMinute = decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Ceil().IntPart()
 //
 //			tempTotalMinute, _ := decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Float64()
@@ -3001,75 +2913,171 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //			}
 //
 //			// 跨日
-//			if period.Start > period.End {
+//			if startStr > endStr {
 //				tempCurrentTime := currentTime
 //				//fmt.Println("===========1111", currentTime.Format(time.DateTime), currentTime.Format("15:04"), period.End, period.Start)
-//				if currentTime.Format("15:04") >= period.Start {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), period.End), time.Local)
+//				if currentTime.Format("15:04") >= startStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), endStr), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
-//				if currentTime.Format("15:04") < period.End {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//				if currentTime.Format("15:04") < endStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//					duration = periodEndTime.Sub(currentTime)
+//				}
+//				if currentTime.Format("15:04") < endStr && endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(86400*time.Second).Format("2006-01-02")), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
 //				durationMinute := decimal.NewFromFloat(duration.Minutes()).IntPart()
 //				if totalMinute < durationMinute {
 //					currentTime = currentTime.Add(time.Duration(totalMinute) * time.Minute)
 //					lastEndTime = currentTime
+//					hourTotalMoney += totalMoney
 //					totalMoney = 0
 //				} else {
 //					currentTime = periodEndTime
 //					lastEndTime = currentTime
 //					surplusMoney, _ := decimal.NewFromInt(durationMinute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
 //					totalMoney -= surplusMoney
+//					hourTotalMoney += surplusMoney
 //				}
 //				Tduration := decimal.NewFromFloat(lastEndTime.Sub(tempCurrentTime).Minutes()).IntPart()
 //				periodList = append(periodList, &PeriodList{
-//					StartTime:  tempCurrentTime.Format("2006-01-02 15:04"),
-//					EndTime:    lastEndTime.Format("2006-01-02 15:04"),
-//					Index:      index,
-//					Duration:   Tduration,
-//					Start:      period.Start,
-//					End:        period.End,
-//					Price:      period.Price,
-//					TotalPrice: totalMoney,
+//					StartTime:      tempCurrentTime.Format("2006-01-02 15:04"),
+//					EndTime:        lastEndTime.Format("2006-01-02 15:04"),
+//					Index:          index,
+//					Duration:       Tduration,
+//					Start:          startStr,
+//					End:            endStr,
+//					Price:          tempPrice,
+//					TotalPrice:     totalMoney,
+//					HourTotalMoney: hourTotalMoney,
 //				})
 //				continue
 //			}
 //			// 当日
-//			if period.Start < period.End && currentTime.Format("15:04") >= period.Start && currentTime.Format("15:04") < period.End {
-//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//			if startStr < endStr && currentTime.Format("15:04") >= startStr && currentTime.Format("15:04") < endStr {
+//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//				if endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(time.Second*86400).Format("2006-01-02")), time.Local)
+//				}
 //				duration = periodEndTime.Sub(currentTime)
+//
 //				durationMinute := decimal.NewFromFloat(duration.Minutes()).IntPart()
 //				tempCurrentTime := currentTime
 //				if totalMinute < durationMinute {
 //					currentTime = currentTime.Add(time.Duration(totalMinute) * time.Minute)
 //					lastEndTime = currentTime
+//					hourTotalMoney += totalMoney
 //					totalMoney = 0
 //				} else {
 //					currentTime = periodEndTime
 //					lastEndTime = currentTime
 //					surplusMoney, _ := decimal.NewFromInt(durationMinute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
 //					totalMoney -= surplusMoney
+//					hourTotalMoney += surplusMoney
 //				}
-//
+//				fmt.Println(lastEndTime.Format(time.DateTime))
 //				Tduration := decimal.NewFromFloat(lastEndTime.Sub(tempCurrentTime).Minutes()).IntPart()
 //				periodList = append(periodList, &PeriodList{
-//					StartTime:  tempCurrentTime.Format("2006-01-02 15:04"),
-//					EndTime:    lastEndTime.Format("2006-01-02 15:04"),
-//					Index:      index,
-//					Duration:   Tduration,
-//					Start:      period.Start,
-//					End:        period.End,
-//					Price:      period.Price,
-//					TotalPrice: totalMoney,
+//					StartTime:      tempCurrentTime.Format("2006-01-02 15:04"),
+//					EndTime:        lastEndTime.Format("2006-01-02 15:04"),
+//					Index:          index,
+//					Duration:       Tduration,
+//					Start:          startStr,
+//					End:            endStr,
+//					Price:          tempPrice,
+//					TotalPrice:     totalMoney,
+//					HourTotalMoney: hourTotalMoney,
 //				})
 //				//fmt.Println("当日")
 //			}
 //		}
 //	}
-//	//fmt.Println("结果：", startDate, lastEndTime.Format(time.DateTime))
+//	//tempStartDate,_:= time.ParseInLocation("2006-01-02 15:04",startDate,time.Local)
+//	//for {
+//	//	if tempStartDate.Unix()>=lastEndTime.Unix() {
+//	//		break
+//	//	}
+//	//
+//	//
+//	//}
+//	hourPeriodLists := l.moneyTransferHourPeriodList(periodList)
+//
+//	fmt.Println("结果：", startDate, lastEndTime.Format(time.DateTime), hourPeriodLists)
 //	return startDate, lastEndTime.Format("2006-01-02 15:04"), periodList
+//}
+//
+//// 获取金额转时长，每小时价格及时段
+//func (l *Charging) moneyTransferHourPeriodList(periodList []*PeriodList) map[string]HourPeriodList {
+//	hourPeriodLists := make(map[string]HourPeriodList, 0)
+//	for _, value := range periodList {
+//		tempTransferStartTime, _ := time.ParseInLocation("2006-01-02 15:04", value.StartTime, time.Local)
+//		transferEndTime, _ := time.ParseInLocation("2006-01-02 15:04", value.EndTime, time.Local)
+//		var transferPrice float64
+//		transferPrice = value.HourTotalMoney
+//		for {
+//			if tempTransferStartTime.Unix() >= transferEndTime.Unix() {
+//				break
+//			}
+//			if tempTransferStartTime.Format("04") != "00" {
+//				tempSplitTime, _ := time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v:00", tempTransferStartTime.Add(60*time.Minute).Format("2006-01-02 15")), time.Local)
+//				totalMaxMinute := decimal.NewFromFloat(tempSplitTime.Sub(tempTransferStartTime).Minutes()).IntPart()
+//				if totalMaxMinute == value.Duration {
+//					hourPeriodLists[tempTransferStartTime.Format("2006-01-02 15")] = HourPeriodList{
+//						StartDate: tempTransferStartTime.Format("2006-01-02 15:04"),
+//						EndDate:   tempTransferStartTime.Add(time.Duration(value.Duration) * time.Minute).Format("2006-01-02 15:04"),
+//						Duration:  value.Duration,
+//						HourPrice: transferPrice,
+//						Price:     value.Price,
+//					}
+//					tempTransferStartTime = tempTransferStartTime.Add(time.Duration(value.Duration) * time.Minute)
+//					continue
+//				}
+//				if totalMaxMinute < 60 {
+//					minutePrice, _ := decimal.NewFromFloat(value.Price).Div(decimal.NewFromInt(60)).Float64()
+//					splitMoney, _ := decimal.NewFromFloat(minutePrice).Mul(decimal.NewFromInt(totalMaxMinute)).Float64()
+//					hourPeriodLists[tempTransferStartTime.Format("2006-01-02 15")] = HourPeriodList{
+//						StartDate: tempTransferStartTime.Format("2006-01-02 15:04"),
+//						EndDate:   tempTransferStartTime.Add(time.Duration(totalMaxMinute) * time.Minute).Format("2006-01-02 15:04"),
+//						Duration:  totalMaxMinute,
+//						HourPrice: splitMoney,
+//						Price:     value.Price,
+//					}
+//					transferPrice -= splitMoney
+//					tempTransferStartTime = tempTransferStartTime.Add(time.Duration(totalMaxMinute) * time.Minute)
+//					continue
+//				}
+//
+//			}
+//			nextTransferStartTime := tempTransferStartTime.Add(60 * time.Minute)
+//			if nextTransferStartTime.Unix() > transferEndTime.Unix() {
+//				tempMinute := decimal.NewFromFloat(transferEndTime.Sub(tempTransferStartTime).Minutes()).IntPart()
+//				hourPeriodLists[tempTransferStartTime.Format("2006-01-02 15")] = HourPeriodList{
+//					StartDate: tempTransferStartTime.Format("2006-01-02 15:04"),
+//					EndDate:   transferEndTime.Format("2006-01-02 15:04"),
+//					Duration:  tempMinute,
+//					HourPrice: transferPrice,
+//					Price:     value.Price,
+//				}
+//				//fmt.Println("==", tempTransferStartTime.Format(time.DateTime), transferEndTime.Format(time.DateTime), transferPrice)
+//				transferPrice = 0
+//			} else {
+//				//fmt.Println(tempTransferStartTime.Format(time.DateTime), nextTransferStartTime.Format(time.DateTime), transferPrice, value.Price)
+//				tempMinute := decimal.NewFromFloat(nextTransferStartTime.Sub(tempTransferStartTime).Minutes()).IntPart()
+//				hourPeriodLists[tempTransferStartTime.Format("2006-01-02 15")] = HourPeriodList{
+//					StartDate: tempTransferStartTime.Format("2006-01-02 15:04"),
+//					EndDate:   nextTransferStartTime.Format("2006-01-02 15:04"),
+//					Duration:  tempMinute,
+//					HourPrice: value.Price,
+//					Price:     value.Price,
+//				}
+//				transferPrice -= value.Price
+//			}
+//			tempTransferStartTime = nextTransferStartTime
+//		}
+//	}
+//	return hourPeriodLists
 //}
 //
 //// 金额算出会有误差，具体以结束计算为准(半小时)[不足半小时或跨时段，剩余金额则按分钟计算]
@@ -3077,30 +3085,45 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //	currentTime, _ := time.ParseInLocation("2006-01-02 15:04", startDate, time.Local)
 //	var lastEndTime time.Time
 //	periodList := make([]*PeriodList, 0)
-//	periods := l.sortPeriods()
+//	//periods := l.sortPeriods()
 //	totalMoney := money
+//	lastEndTime = currentTime
 //	for {
 //		if totalMoney <= 0 {
 //			break
 //		}
+//		periods := l.sortPeriods(lastEndTime)
 //		var periodEndTime time.Time
 //		var duration time.Duration
 //
-//		for _, index := range periods {
-//			period := l.periods[int64(index)]
+//		for index, period := range periods.Hour {
+//			var hourTotalMoney float64
+//			endStr := fmt.Sprintf("%v:00", period.End)
+//			if period.End < 10 {
+//				endStr = fmt.Sprintf("0%v:00", period.End)
+//			}
+//			startStr := fmt.Sprintf("%v:00", period.Start)
+//			if period.Start < 10 {
+//				startStr = fmt.Sprintf("0%v:00", period.Start)
+//			}
+//			var tempPrice float64
+//			tempPrice, _ = strconv.ParseFloat(period.IdlePrice, 10)
+//			if l.member == 1 {
+//				tempPrice, _ = strconv.ParseFloat(period.MemberPrice, 10)
+//			}
 //			var minutePrice float64
 //			var totalMinute int64
 //			if totalMoney <= 0 {
 //				continue
 //			}
-//			if currentTime.Format("15:04") == period.End {
+//			if currentTime.Format("15:04") == endStr {
 //				//fmt.Println("跳过本次日期", currentTime.Format(time.DateTime), period.End, period.Start)
 //				continue
 //			}
 //			tempCurrentTime := currentTime
-//			minutePrice, _ = decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(60)).Float64()
+//			minutePrice, _ = decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(60)).Float64()
 //			totalMinute = decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Ceil().IntPart()
-//			halfHourPrice, _ := decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(2)).Float64()
+//			halfHourPrice, _ := decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(2)).Float64()
 //
 //			tempTotalMinute, _ := decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Float64()
 //			tempTotalMinuteWhole := decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).IntPart()
@@ -3111,13 +3134,17 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //			}
 //
 //			// 跨日
-//			if period.Start > period.End {
-//				if currentTime.Format("15:04") >= period.Start {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), period.End), time.Local)
+//			if startStr > endStr {
+//				if currentTime.Format("15:04") >= startStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), endStr), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
-//				if currentTime.Format("15:04") < period.End {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//				if currentTime.Format("15:04") < endStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//					duration = periodEndTime.Sub(currentTime)
+//				}
+//				if currentTime.Format("15:04") < endStr && endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(86400*time.Second).Format("2006-01-02")), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
 //				tempTotalEndTime := currentTime.Add(time.Duration(totalMinute) * time.Minute)
@@ -3129,8 +3156,11 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				currentTime = periodEndTime
 //			}
 //			// 当日
-//			if period.Start < period.End && currentTime.Format("15:04") >= period.Start && currentTime.Format("15:04") < period.End {
-//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//			if startStr < endStr && currentTime.Format("15:04") >= startStr && currentTime.Format("15:04") < endStr {
+//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//				if endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(time.Second*86400).Format("2006-01-02")), time.Local)
+//				}
 //				duration = periodEndTime.Sub(currentTime)
 //				tempTotalEndTime := currentTime.Add(time.Duration(totalMinute) * time.Minute)
 //				if tempTotalEndTime.Unix() < periodEndTime.Unix() {
@@ -3150,25 +3180,31 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				surplusMinuteMoney, _ := decimal.NewFromInt(surplusMinute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
 //				surplusMoney, _ = decimal.NewFromFloat(surplusMoney).Add(decimal.NewFromFloat(surplusMinuteMoney)).Float64()
 //				totalMoney -= surplusMoney
+//				hourTotalMoney += surplusMoney
 //				// 小于0.001元，强制至为0元,因为已不足按1元一小时，每分钟价格
 //				if totalMoney < 0.001 {
+//					hourTotalMoney += totalMoney
 //					totalMoney = 0
 //				}
 //
 //				Tduration := decimal.NewFromInt(durationMinute).IntPart()
 //				periodList = append(periodList, &PeriodList{
-//					StartTime:  tempCurrentTime.Format("2006-01-02 15:04"),
-//					EndTime:    lastEndTime.Format("2006-01-02 15:04"),
-//					Index:      index,
-//					Duration:   Tduration,
-//					Start:      period.Start,
-//					End:        period.End,
-//					Price:      period.Price,
-//					TotalPrice: totalMoney,
+//					StartTime:      tempCurrentTime.Format("2006-01-02 15:04"),
+//					EndTime:        lastEndTime.Format("2006-01-02 15:04"),
+//					Index:          index,
+//					Duration:       Tduration,
+//					Start:          startStr,
+//					End:            endStr,
+//					Price:          tempPrice,
+//					TotalPrice:     totalMoney,
+//					HourTotalMoney: hourTotalMoney,
 //				})
 //			}
 //		}
 //	}
+//
+//	hourPeriodLists := l.moneyTransferHourPeriodList(periodList)
+//	fmt.Println(hourPeriodLists)
 //	return startDate, lastEndTime.Format("2006-01-02 15:04"), periodList
 //}
 //
@@ -3177,29 +3213,47 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //	currentTime, _ := time.ParseInLocation("2006-01-02 15:04", startDate, time.Local)
 //	var lastEndTime time.Time
 //	periodList := make([]*PeriodList, 0)
-//	periods := l.sortPeriods()
+//	//periods := l.sortPeriods()
 //	totalMoney := money
+//	lastEndTime = currentTime
 //	for {
 //		if totalMoney <= 0 {
 //			break
 //		}
+//		periods := l.sortPeriods(lastEndTime)
+//
 //		var periodEndTime time.Time
 //		var duration time.Duration
+//		for index, period := range periods.Hour {
+//			var hourTotalMoney float64
+//			endStr := fmt.Sprintf("%v:00", period.End)
+//			if period.End < 10 {
+//				endStr = fmt.Sprintf("0%v:00", period.End)
+//			}
+//			startStr := fmt.Sprintf("%v:00", period.Start)
+//			if period.Start < 10 {
+//				startStr = fmt.Sprintf("0%v:00", period.Start)
+//			}
+//			var tempPrice float64
+//			tempPrice, _ = strconv.ParseFloat(period.IdlePrice, 10)
+//			if l.member == 1 {
+//				tempPrice, _ = strconv.ParseFloat(period.MemberPrice, 10)
+//			}
 //
-//		for _, index := range periods {
-//			period := l.periods[int64(index)]
+//			//for _, index := range periods {
+//			//	period := l.periods[int64(index)]
 //			var minutePrice float64
 //			var totalMinute int64
 //			if totalMoney <= 0 {
 //				continue
 //			}
-//			if currentTime.Format("15:04") == period.End {
+//			if currentTime.Format("15:04") == endStr {
 //				//fmt.Println("跳过本次日期", currentTime.Format(time.DateTime), period.End, period.Start)
 //				continue
 //			}
 //
 //			tempCurrentTime := currentTime
-//			minutePrice, _ = decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(60)).Float64()
+//			minutePrice, _ = decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(60)).Float64()
 //			totalMinute = decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Ceil().IntPart()
 //
 //			tempTotalMinute, _ := decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Float64()
@@ -3211,15 +3265,20 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //			}
 //
 //			// 跨日
-//			if period.Start > period.End {
-//				if currentTime.Format("15:04") >= period.Start {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), period.End), time.Local)
+//			if startStr > endStr {
+//				if currentTime.Format("15:04") >= startStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), endStr), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
-//				if currentTime.Format("15:04") < period.End {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//				if currentTime.Format("15:04") < endStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
+//				if currentTime.Format("15:04") < endStr && endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(86400*time.Second).Format("2006-01-02")), time.Local)
+//					duration = periodEndTime.Sub(currentTime)
+//				}
+//
 //				tempTotalEndTime := currentTime.Add(time.Duration(totalMinute) * time.Minute)
 //				if tempTotalEndTime.Unix() < periodEndTime.Unix() {
 //					periodEndTime = tempTotalEndTime
@@ -3229,8 +3288,11 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				currentTime = periodEndTime
 //			}
 //			// 当日
-//			if period.Start < period.End && currentTime.Format("15:04") >= period.Start && currentTime.Format("15:04") < period.End {
-//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//			if startStr < endStr && currentTime.Format("15:04") >= startStr && currentTime.Format("15:04") < endStr {
+//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//				if endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(time.Second*86400).Format("2006-01-02")), time.Local)
+//				}
 //				duration = periodEndTime.Sub(currentTime)
 //				tempTotalEndTime := currentTime.Add(time.Duration(totalMinute) * time.Minute)
 //				if tempTotalEndTime.Unix() < periodEndTime.Unix() {
@@ -3246,29 +3308,34 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				maxMinute := decimal.NewFromInt(haltHour).Mul(decimal.NewFromInt(60)).IntPart()
 //				subMinute := decimal.NewFromInt(maxMinute).Sub(decimal.NewFromInt(durationMinute)).IntPart()
 //				surplusMinute := decimal.NewFromInt(60).Sub(decimal.NewFromInt(subMinute)).IntPart()
-//				surplusMoney, _ := decimal.NewFromInt(haltHour - 1).Mul(decimal.NewFromFloat(period.Price)).Float64()
+//				surplusMoney, _ := decimal.NewFromInt(haltHour - 1).Mul(decimal.NewFromFloat(tempPrice)).Float64()
 //				surplusMinuteMoney, _ := decimal.NewFromInt(surplusMinute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
 //				surplusMoney, _ = decimal.NewFromFloat(surplusMoney).Add(decimal.NewFromFloat(surplusMinuteMoney)).Float64()
 //				totalMoney -= surplusMoney
+//				hourTotalMoney += surplusMoney
 //				// 小于0.001元，强制至为0元,因为已不足按1元一小时，每分钟价格
 //				if totalMoney < 0.001 {
+//					hourTotalMoney += totalMoney
 //					totalMoney = 0
 //				}
 //
 //				Tduration := decimal.NewFromInt(durationMinute).IntPart()
 //				periodList = append(periodList, &PeriodList{
-//					StartTime:  tempCurrentTime.Format("2006-01-02 15:04"),
-//					EndTime:    lastEndTime.Format("2006-01-02 15:04"),
-//					Index:      index,
-//					Duration:   Tduration,
-//					Start:      period.Start,
-//					End:        period.End,
-//					Price:      period.Price,
-//					TotalPrice: totalMoney,
+//					StartTime:      tempCurrentTime.Format("2006-01-02 15:04"),
+//					EndTime:        lastEndTime.Format("2006-01-02 15:04"),
+//					Index:          index,
+//					Duration:       Tduration,
+//					Start:          startStr,
+//					End:            endStr,
+//					Price:          tempPrice,
+//					TotalPrice:     totalMoney,
+//					HourTotalMoney: hourTotalMoney,
 //				})
 //			}
 //		}
 //	}
+//	hourPeriodLists := l.moneyTransferHourPeriodList(periodList)
+//	fmt.Println(hourPeriodLists)
 //	return startDate, lastEndTime.Format("2006-01-02 15:04"), periodList
 //}
 //
@@ -3277,17 +3344,35 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //	currentTime, _ := time.ParseInLocation("2006-01-02 15:04", startDate, time.Local)
 //	var lastEndTime time.Time
 //	periodList := make([]*PeriodList, 0)
-//	periods := l.sortPeriods()
+//	//periods := l.sortPeriods()
 //	totalMoney := money
+//	lastEndTime = currentTime
 //	for {
 //		if totalMoney <= 0 {
 //			break
 //		}
+//		periods := l.sortPeriods(lastEndTime)
+//
 //		var periodEndTime time.Time
 //		var duration time.Duration
 //
-//		for _, index := range periods {
-//			period := l.periods[int64(index)]
+//		for index, period := range periods.Hour {
+//			var hourTotalMoney float64
+//			endStr := fmt.Sprintf("%v:00", period.End)
+//			if period.End < 10 {
+//				endStr = fmt.Sprintf("0%v:00", period.End)
+//			}
+//			startStr := fmt.Sprintf("%v:00", period.Start)
+//			if period.Start < 10 {
+//				startStr = fmt.Sprintf("0%v:00", period.Start)
+//			}
+//			var tempPrice float64
+//			tempPrice, _ = strconv.ParseFloat(period.IdlePrice, 10)
+//			if l.member == 1 {
+//				tempPrice, _ = strconv.ParseFloat(period.MemberPrice, 10)
+//			}
+//			//for _, index := range periods {
+//			//	period := l.periods[int64(index)]
 //			var minutePrice float64
 //			var totalMinute int64
 //			var halfOrHourPrice float64
@@ -3296,12 +3381,12 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				continue
 //			}
 //			//halfHourPrice, _ := decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(2)).Float64()
-//			if currentTime.Format("15:04") == period.End {
+//			if currentTime.Format("15:04") == endStr {
 //				//fmt.Println("跳过本次日期", currentTime.Format(time.DateTime), period.End, period.Start)
 //				continue
 //			}
 //			tempCurrentTime := currentTime
-//			minutePrice, _ = decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(60)).Float64()
+//			minutePrice, _ = decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(60)).Float64()
 //			totalMinute = decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Ceil().IntPart()
 //
 //			tempTotalMinute, _ := decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Float64()
@@ -3313,24 +3398,28 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //			}
 //
 //			// 不足半小时计费按小时计费，超过半小时按分钟计费
-//			if l.chargingMode == 4 {
-//				halfOrHourPrice, _ = decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(2)).Float64()
+//			if ContainsSliceInt64([]int64{6, 7}, l.chargingMode) {
+//				halfOrHourPrice, _ = decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(2)).Float64()
 //				minute = 30
 //			}
 //			// 不足一小时计费按小时计费，超过一小时按分钟计费
-//			if l.chargingMode == 5 {
-//				halfOrHourPrice = period.Price
+//			if ContainsSliceInt64([]int64{8, 9}, l.chargingMode) {
+//				halfOrHourPrice = tempPrice
 //				minute = 60
 //			}
 //
 //			// 跨日
-//			if period.Start > period.End {
-//				if currentTime.Format("15:04") >= period.Start {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), period.End), time.Local)
+//			if startStr > endStr {
+//				if currentTime.Format("15:04") >= startStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), endStr), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
-//				if currentTime.Format("15:04") < period.End {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//				if currentTime.Format("15:04") < endStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//					duration = periodEndTime.Sub(currentTime)
+//				}
+//				if currentTime.Format("15:04") < endStr && endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(86400*time.Second).Format("2006-01-02")), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
 //				tempTotalEndTime := currentTime.Add(time.Duration(totalMinute) * time.Minute)
@@ -3342,8 +3431,11 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				currentTime = periodEndTime
 //			}
 //			// 当日
-//			if period.Start < period.End && currentTime.Format("15:04") >= period.Start && currentTime.Format("15:04") < period.End {
-//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//			if startStr < endStr && currentTime.Format("15:04") >= startStr && currentTime.Format("15:04") < endStr {
+//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//				if endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(time.Second*86400).Format("2006-01-02")), time.Local)
+//				}
 //				duration = periodEndTime.Sub(currentTime)
 //				tempTotalEndTime := currentTime.Add(time.Duration(totalMinute) * time.Minute)
 //				if tempTotalEndTime.Unix() < periodEndTime.Unix() {
@@ -3363,25 +3455,30 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				surplusMinuteMoney, _ := decimal.NewFromInt(surplusMinute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
 //				surplusMoney, _ = decimal.NewFromFloat(surplusMoney).Add(decimal.NewFromFloat(surplusMinuteMoney)).Float64()
 //				totalMoney -= surplusMoney
+//				hourTotalMoney += surplusMoney
 //				// 小于0.001元，强制至为0元,因为已不足按1元一小时，每分钟价格
 //				if totalMoney < 0.001 {
+//					hourTotalMoney += totalMoney
 //					totalMoney = 0
 //				}
 //
 //				Tduration := decimal.NewFromInt(durationMinute).IntPart()
 //				periodList = append(periodList, &PeriodList{
-//					StartTime:  tempCurrentTime.Format("2006-01-02 15:04"),
-//					EndTime:    lastEndTime.Format("2006-01-02 15:04"),
-//					Index:      index,
-//					Duration:   Tduration,
-//					Start:      period.Start,
-//					End:        period.End,
-//					Price:      period.Price,
-//					TotalPrice: totalMoney,
+//					StartTime:      tempCurrentTime.Format("2006-01-02 15:04"),
+//					EndTime:        lastEndTime.Format("2006-01-02 15:04"),
+//					Index:          index,
+//					Duration:       Tduration,
+//					Start:          startStr,
+//					End:            endStr,
+//					Price:          tempPrice,
+//					TotalPrice:     totalMoney,
+//					HourTotalMoney: hourTotalMoney,
 //				})
 //			}
 //		}
 //	}
+//	hourPeriodLists := l.moneyTransferHourPeriodList(periodList)
+//	fmt.Println(hourPeriodLists)
 //	return startDate, lastEndTime.Format("2006-01-02 15:04"), periodList
 //}
 //
@@ -3390,17 +3487,34 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //	currentTime, _ := time.ParseInLocation("2006-01-02 15:04", startDate, time.Local)
 //	var lastEndTime time.Time
 //	periodList := make([]*PeriodList, 0)
-//	periods := l.sortPeriods()
+//	//periods := l.sortPeriods()
 //	totalMoney := money
+//	lastEndTime = currentTime
 //	for {
 //		if totalMoney <= 0 {
 //			break
 //		}
+//		periods := l.sortPeriods(lastEndTime)
 //		var periodEndTime time.Time
 //		var duration time.Duration
 //
-//		for _, index := range periods {
-//			period := l.periods[int64(index)]
+//		for index, period := range periods.Hour {
+//			var hourTotalMoney float64
+//			endStr := fmt.Sprintf("%v:00", period.End)
+//			if period.End < 10 {
+//				endStr = fmt.Sprintf("0%v:00", period.End)
+//			}
+//			startStr := fmt.Sprintf("%v:00", period.Start)
+//			if period.Start < 10 {
+//				startStr = fmt.Sprintf("0%v:00", period.Start)
+//			}
+//			var tempPrice float64
+//			tempPrice, _ = strconv.ParseFloat(period.IdlePrice, 10)
+//			if l.member == 1 {
+//				tempPrice, _ = strconv.ParseFloat(period.MemberPrice, 10)
+//			}
+//			//for _, index := range periods {
+//			//	period := l.periods[int64(index)]
 //			var minutePrice float64
 //			var totalMinute int64
 //			//var halfOrHourPrice float64
@@ -3410,12 +3524,12 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				continue
 //			}
 //			//halfHourPrice, _ := decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(2)).Float64()
-//			if currentTime.Format("15:04") == period.End {
+//			if currentTime.Format("15:04") == endStr {
 //				//fmt.Println("跳过本次日期", currentTime.Format(time.DateTime), period.End, period.Start)
 //				continue
 //			}
 //			tempCurrentTime := currentTime
-//			minutePrice, _ = decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(60)).Float64()
+//			minutePrice, _ = decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(60)).Float64()
 //			totalMinute = decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Ceil().IntPart()
 //
 //			tempTotalMinute, _ := decimal.NewFromFloat(totalMoney).Div(decimal.NewFromFloat(minutePrice)).Float64()
@@ -3427,23 +3541,27 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //			}
 //
 //			if l.cycleMinute == 30 {
-//				cyclePrice, _ = decimal.NewFromFloat(period.Price).Div(decimal.NewFromInt(2)).Float64()
+//				cyclePrice, _ = decimal.NewFromFloat(tempPrice).Div(decimal.NewFromInt(2)).Float64()
 //			}
 //			if l.cycleMinute == 60 {
-//				cyclePrice = period.Price
+//				cyclePrice = tempPrice
 //			}
 //			if l.cycleMinute != 30 && l.cycleMinute != 60 {
 //				cyclePrice, _ = decimal.NewFromFloat(minutePrice).Mul(decimal.NewFromInt(l.cycleMinute)).Float64()
 //			}
 //
 //			// 跨日
-//			if period.Start > period.End {
-//				if currentTime.Format("15:04") >= period.Start {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), period.End), time.Local)
+//			if startStr > endStr {
+//				if currentTime.Format("15:04") >= startStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%v %v", time.Unix(currentTime.Unix()+86400, 0).Format("2006-01-02"), endStr), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
-//				if currentTime.Format("15:04") < period.End {
-//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//				if currentTime.Format("15:04") < endStr {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//					duration = periodEndTime.Sub(currentTime)
+//				}
+//				if currentTime.Format("15:04") < endStr && endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(86400*time.Second).Format("2006-01-02")), time.Local)
 //					duration = periodEndTime.Sub(currentTime)
 //				}
 //				tempTotalEndTime := currentTime.Add(time.Duration(totalMinute) * time.Minute)
@@ -3455,8 +3573,11 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				currentTime = periodEndTime
 //			}
 //			// 当日
-//			if period.Start < period.End && currentTime.Format("15:04") >= period.Start && currentTime.Format("15:04") < period.End {
-//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), period.End), time.Local)
+//			if startStr < endStr && currentTime.Format("15:04") >= startStr && currentTime.Format("15:04") < endStr {
+//				periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s %s", currentTime.Format("2006-01-02"), endStr), time.Local)
+//				if endStr == "24:00" {
+//					periodEndTime, _ = time.ParseInLocation("2006-01-02 15:04", fmt.Sprintf("%s 00:00", currentTime.Add(time.Second*86400).Format("2006-01-02")), time.Local)
+//				}
 //				duration = periodEndTime.Sub(currentTime)
 //				tempTotalEndTime := currentTime.Add(time.Duration(totalMinute) * time.Minute)
 //				if tempTotalEndTime.Unix() < periodEndTime.Unix() {
@@ -3476,25 +3597,30 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //				surplusMinuteMoney, _ := decimal.NewFromInt(surplusMinute).Mul(decimal.NewFromFloat(minutePrice)).Float64()
 //				surplusMoney, _ = decimal.NewFromFloat(surplusMoney).Add(decimal.NewFromFloat(surplusMinuteMoney)).Float64()
 //				totalMoney -= surplusMoney
+//				hourTotalMoney += surplusMoney
 //				// 小于0.001元，强制至为0元,因为已不足按1元一小时，每分钟价格
 //				if totalMoney < 0.001 {
+//					hourTotalMoney += totalMoney
 //					totalMoney = 0
 //				}
 //
 //				Tduration := decimal.NewFromInt(durationMinute).IntPart()
 //				periodList = append(periodList, &PeriodList{
-//					StartTime:  tempCurrentTime.Format("2006-01-02 15:04"),
-//					EndTime:    lastEndTime.Format("2006-01-02 15:04"),
-//					Index:      index,
-//					Duration:   Tduration,
-//					Start:      period.Start,
-//					End:        period.End,
-//					Price:      period.Price,
-//					TotalPrice: totalMoney,
+//					StartTime:      tempCurrentTime.Format("2006-01-02 15:04"),
+//					EndTime:        lastEndTime.Format("2006-01-02 15:04"),
+//					Index:          index,
+//					Duration:       Tduration,
+//					Start:          startStr,
+//					End:            endStr,
+//					Price:          tempPrice,
+//					TotalPrice:     totalMoney,
+//					HourTotalMoney: hourTotalMoney,
 //				})
 //			}
 //		}
 //	}
+//	hourPeriodLists := l.moneyTransferHourPeriodList(periodList)
+//	fmt.Println(hourPeriodLists)
 //	return startDate, lastEndTime.Format("2006-01-02 15:04"), periodList
 //}
 //
@@ -3516,22 +3642,27 @@ func (l *Charging) computeCycleAndMinuteModeTwo(times []periodTimes) (float64, m
 //	// 半小时计费
 //	if ContainsSliceInt64([]int64{2, 3}, l.chargingMode) {
 //		startData, endData, periodList = l.moneyTransferHalfHourTime(money, startDateParam)
+//		fmt.Println(startData, endData, periodList)
 //	}
 //	// 小时计费
 //	if ContainsSliceInt64([]int64{4, 5}, l.chargingMode) {
 //		startData, endData, periodList = l.moneyTransferHourTime(money, startDateParam)
+//		fmt.Println(startData, endData, periodList)
 //	}
 //	// 按半小时计费开台不足半小时按半小时计费，超过半小时按分钟计费
 //	if ContainsSliceInt64([]int64{6, 7}, l.chargingMode) {
 //		startData, endData, periodList = l.moneyTransferHalfOrHourAndMinuteTime(money, startDateParam)
+//		fmt.Println(startData, endData, periodList)
 //	}
 //	// 按小时计费开台不足1小时按小时计费，超过1小时按分钟计费
 //	if ContainsSliceInt64([]int64{8, 9}, l.chargingMode) {
 //		startData, endData, periodList = l.moneyTransferHalfOrHourAndMinuteTime(money, startDateParam)
+//		fmt.Println(startData, endData, periodList)
 //	}
 //	// 自定义计费
 //	if ContainsSliceInt64([]int64{10, 11}, l.chargingMode) {
 //		startData, endData, periodList = l.moneyTransferCycleAndMinuteTime(money, startDateParam)
+//		fmt.Println(startData, endData, periodList)
 //	}
 //	return startData, endData, periodList
 //}
