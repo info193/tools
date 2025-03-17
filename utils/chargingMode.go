@@ -14,29 +14,30 @@ type ChargePeriodAssembly struct {
 	Holiday    *ChargePeriodSetHoliday `json:"holiday"`     // 节假日
 	Hour       *ChargePeriodSetHour    `json:"hour"`        // 小时收费时段
 	HourStairs []HourStairs            `json:"hour_stairs"` // 阶梯计费
+	MinConsume *ChargePeriodMinConsume `json:"min_consume"`
 }
 
 // 星期
 type ChargePeriodSetWeek struct {
-	Week       []int64                 `json:"week"`      // 星期
-	Hour       []CPHour                `json:"hour"`      // 收费时段
-	HourPeak   []CPHour                `json:"hour_peak"` // 时段封顶
-	MinConsume *ChargePeriodMinConsume `json:"min_consume"`
+	Week     []int64  `json:"week"`      // 星期
+	Hour     []CPHour `json:"hour"`      // 收费时段
+	HourPeak []CPHour `json:"hour_peak"` // 时段封顶
+	//MinConsume *ChargePeriodMinConsume `json:"min_consume"`
 }
 
 // 小时收费时段
 type ChargePeriodSetHour struct {
-	Hour       []CPHour                `json:"hour"`      // 收费时段
-	HourPeak   []CPHour                `json:"hour_peak"` // 时段封顶
-	MinConsume *ChargePeriodMinConsume `json:"min_consume"`
+	Hour     []CPHour `json:"hour"`      // 收费时段
+	HourPeak []CPHour `json:"hour_peak"` // 时段封顶
+	//MinConsume *ChargePeriodMinConsume `json:"min_consume"`
 }
 
 // 节假日
 type ChargePeriodSetHoliday struct {
-	Date       [][]string               `json:"date"`      // 星期
-	Hour       [][]CPHour               `json:"hour"`      // 收费时段
-	HourPeak   [][]CPHour               `json:"hour_peak"` // 时段封顶
-	MinConsume []ChargePeriodMinConsume `json:"min_consume"`
+	Date     [][]string `json:"date"`      // 星期
+	Hour     [][]CPHour `json:"hour"`      // 收费时段
+	HourPeak [][]CPHour `json:"hour_peak"` // 时段封顶
+	//MinConsume []ChargePeriodMinConsume `json:"min_consume"`
 }
 
 type ChargePeriodMinConsume struct {
