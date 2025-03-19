@@ -54,8 +54,8 @@ type CPHour struct {
 
 type HourStairs struct {
 	Index       int64  `json:"index"`
-	Start       int64  `json:"start"`
-	End         int64  `json:"end"`
+	Start       int64  `json:"-"`
+	End         int64  `json:"-"`
 	IdlePrice   string `json:"idle_price"`
 	MemberPrice string `json:"member_price"`
 }
