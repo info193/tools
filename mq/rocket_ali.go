@@ -59,7 +59,7 @@ func (r *RocketAli) DeferPublish(b *BusinessConfig, msg string, t time.Duration)
 	msgReq := mq_http_sdk.PublishMessageRequest{
 		MessageBody:      msg,   // 消息内容
 		MessageTag:       b.Tag, // 消息标签
-		StartDeliverTime: time.Now().Add(t).UTC().Unix() * 1000,
+		StartDeliverTime: time.Now().Add(t).Local().Unix() * 1000,
 	}
 	instanceId := r.Cfg.InstanceId
 	mqProducer := r.newMQClient().GetProducer(instanceId, b.Topic)
