@@ -162,8 +162,8 @@ func (r *RabbitMQ) DeferPublish(b *BusinessConfig, body string, t time.Duration)
 		return errors.New("发送延时消息，延迟时间参数是必须的填写")
 	}
 	ttl := t.Milliseconds()
-
-	delayQueueName := fmt.Sprintf("enqueue.%s.%v.x.delay", b.Name, ttl)
+	//delayQueueName := fmt.Sprintf("enqueue.%s.%v.x.delay", b.Name, ttl)
+	delayQueueName := r.delayQueueName(b.Name, ttl)
 	// 用于检查队列是否存在,已经存在不需要重复声明
 	_, err = ch.QueueDeclare(delayQueueName, true, false, false, false, amqp.Table{
 		"x-dead-letter-exchange":    b.GroupId,
@@ -193,6 +193,134 @@ func (r *RabbitMQ) DeferPublish(b *BusinessConfig, body string, t time.Duration)
 	}
 	return nil
 }
+
+func (r *RabbitMQ) delayQueueName(name string, ttl int64) string {
+	var max int64
+	var min int64
+	// 0-15秒
+	if ttl <= 15000 {
+		min = 0
+		max = 15000
+	}
+	// 15-30秒
+	if ttl <= 30000 && ttl > 15000 {
+		min = 15000
+		max = 30000
+	}
+	// 30-5分钟
+	if ttl <= 300000 && ttl > 30000 {
+		min = 30000
+		max = 300000
+	}
+
+	// 5-10分钟
+	if ttl <= 600000 && ttl > 300000 {
+		min = 300000
+		max = 600000
+	}
+
+	// 10-15分钟
+	if ttl <= 900000 && ttl > 600000 {
+		min = 600000
+		max = 900000
+	}
+
+	// 10-30分钟
+	if ttl <= 1800000 && ttl > 900000 {
+		min = 900000
+		max = 1800000
+	}
+
+	// 30-60分钟
+	if ttl <= 3600000 && ttl > 1800000 {
+		min = 1800000
+		max = 3600000
+	}
+
+	// 60-90分钟
+	if ttl <= 5400000 && ttl > 3600000 {
+		min = 3600000
+		max = 5400000
+	}
+
+	// 1.5-3小时
+	if ttl <= 10800000 && ttl > 5400000 {
+		min = 1800000
+		max = 5400000
+	}
+	// 3-7小时
+	if ttl <= 25200000 && ttl > 10800000 {
+		min = 10800000
+		max = 25200000
+	}
+	// 7-10小时
+	if ttl <= 36000000 && ttl > 25200000 {
+		min = 25200000
+		max = 36000000
+	}
+	// 10-15小时
+	if ttl <= 54000000 && ttl > 36000000 {
+		min = 36000000
+		max = 54000000
+	}
+	// 15-24小时
+	if ttl <= 86400000 && ttl > 54000000 {
+		min = 54000000
+		max = 86400000
+	}
+
+	// 24小时-3天
+	if ttl <= 259200000 && ttl > 86400000 {
+		min = 86400000
+		max = 259200000
+	}
+
+	// 3天-7天
+	if ttl <= 604800000 && ttl > 259200000 {
+		min = 259200000
+		max = 604800000
+	}
+	// 7天-14天
+	if ttl <= 1209600000 && ttl > 604800000 {
+		min = 604800000
+		max = 1209600000
+	}
+
+	// 14天-20天
+	if ttl <= 1728000000 && ttl > 1209600000 {
+		min = 1209600000
+		max = 1728000000
+	}
+	// 20天-30天
+	if ttl <= 2592000000 && ttl > 1728000000 {
+		min = 1728000000
+		max = 2592000000
+	}
+	// 30天-90天
+	if ttl <= 7776000000 && ttl > 2592000000 {
+		min = 2592000000
+		max = 7776000000
+	}
+
+	// 90天-180天
+	if ttl <= 15552000000 && ttl > 7776000000 {
+		min = 7776000000
+		max = 15552000000
+	}
+	// 180天-360天
+	if ttl <= 15552000000 && ttl > 7776000000 {
+		min = 7776000000
+		max = 15552000000
+	}
+	// 360天-无限期
+	if ttl > 15552000000 {
+		min = 15552000000
+		max = -1
+	}
+
+	return fmt.Sprintf("enqueue.%s.%d.%d.x.delay", name, min, max)
+}
+
 func (r *RabbitMQ) Listen() {
 	var (
 		exitTask bool
@@ -282,8 +410,8 @@ func (r *RabbitMQ) Receiver(b *BusinessConfig, handle Handle) {
 		// 处理数据
 		err := handle(string(msg.Body))
 		if err == nil {
-			// 确认消息,必须为false
-			err = msg.Ack(true)
+			// 确认消息,必须为false   false为单条确认，true批量确认（可能会丢消息）
+			err = msg.Ack(false)
 			if err != nil {
 				log.Printf("消息消费ack失败 err=%v", err)
 			}
@@ -308,7 +436,8 @@ func (r *RabbitMQ) Receiver(b *BusinessConfig, handle Handle) {
 				log.Printf("消息处理多次后还是失败了 可以扩展功能写入到 db 或邮件通知")
 				//receiver.FailAction(err, msg.Body)
 			}
-			err = msg.Ack(true)
+			// 确认消息,必须为false   false为单条确认，true批量确认（可能会丢消息）
+			err = msg.Ack(false)
 			if err != nil {
 				log.Printf("消息消费ack失败 err=%v", err)
 			}
