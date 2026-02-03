@@ -148,6 +148,35 @@ func (l *WechatSDK) Query(request *QueryRequest) (*wechat.QueryOrder, error) {
 	return response.Response, nil
 }
 
+// miniRefund 小程序退款
+func (l *WechatSDK) miniRefund(request *RefundRequest) (*wechat.RefundRsp, error) {
+	if l.conn == nil {
+		return nil, PayGatewayFail
+	}
+	if request.OutRefundNo == "" && request.OutTradeNo == "" {
+		return nil, ParamFail
+	}
+
+	bm := make(gopay.BodyMap)
+	bm.Set("out_trade_no", request.OutTradeNo).
+		Set("out_refund_no", request.OutRefundNo).
+		Set("out_trade_no", request.OutTradeNo).
+		Set("notify_url", request.NotifyUrl).
+		SetBodyMap("amount", func(bm gopay.BodyMap) {
+			bm.Set("refund", request.Amount).Set("total", request.TotalAmount).Set("currency", "CNY")
+		})
+	response, err := l.conn.V3Refund(context.Background(), bm)
+	if err != nil {
+		return nil, err
+	}
+	// 判断请求状态
+	if response.Code != wechat.Success {
+		return nil, errors.New(response.Error)
+	}
+
+	return nil, nil
+}
+
 // RefundQuery 退款订单查询
 func (l *WechatSDK) RefundQuery(request *RefundQueryRequest) (*wechat.RefundQueryResponse, error) {
 	if l.conn == nil {

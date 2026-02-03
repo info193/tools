@@ -23,6 +23,16 @@ type QueryRequest struct {
 	TradeNo    string `json:"trade_no"`     // 原支付单号(支付平台)
 }
 
+// RefundRequest 交易查询请求
+type RefundRequest struct {
+	OutTradeNo  string `json:"out_trade_no"`  // 商户订单号
+	OutRefundNo string `json:"out_refund_no"` // 退款请求号,如果在退款请求时未传入，则该值为创建交易时的商户订单号。
+	TradeNo     string `json:"trade_no"`      // 原支付单号(支付平台)
+	Amount      int64  `json:"amount"`        // 付款金额（分）
+	TotalAmount int64  `json:"total_amount"`  // 总金额（分）
+	NotifyUrl   string `json:"notify_url"`    // 异步回调地址
+}
+
 // RefundQueryRequest 退款查询请求
 type RefundQueryRequest struct {
 	OutRefundNo string `json:"out_refund_no"` // 退款请求号,如果在退款请求时未传入，则该值为创建交易时的商户订单号。

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/info193/tools/pay"
 	"testing"
+	"time"
 )
 
 func TestPay(t *testing.T) {
@@ -69,7 +70,41 @@ func TestPay(t *testing.T) {
 
 	//alipayQuery(pay)
 	//wechatQuery(pay)
-	wechatRefundQuery(pay)
+	//wechatRefundQuery(pay)
+	wechats(pay)
+}
+func wechats(ipay pay.IPAY) {
+	hour := 0
+	mins := 0
+	sec := 0
+	now := time.Now()
+	s := time.Date(now.Year(), now.Month(), 1, hour, mins, sec, 0, now.Location())
+	fmt.Println(s.Format("2006-01-02 15:04:05"))
+	fmt.Println(s.Add(30 * time.Minute).Format("2006-01-02 15:04:05"))
+	return
+
+	lastDayOfMonth := time.Date(now.Year(), now.Month()+1, 1, 00, 00, 00, 0, now.Location())
+	fmt.Println(time.Unix(lastDayOfMonth.Unix()-86400, 0).Format("2006-01-02 15:04:05"))
+	return
+	fmt.Println("当前月份的最后一天是:", time.Unix(lastDayOfMonth.Unix()-1, 0).Format("2006-01-02 15:04:05"))
+	fmt.Println(time.Now().Local().Day())
+	fmt.Println(time.Now().Local().Format("200601"))
+	return
+	request := pay.PayRequest{
+		Subject:    "测试",
+		Amount:     100,
+		OutTradeNo: "20250910131003433842041",
+		TimeExpire: 5 * time.Second,
+		NotifyUrl:  "https://api.pandaball.cc/callback",
+		Attach:     "member",
+		Account:    "oPHvT5dLm3bk9Vb2ts108r6DYnsg",
+	}
+
+	wc, err := ipay.Wechat().Mini(&request)
+	if err != nil {
+		fmt.Println("错误", err)
+	}
+	fmt.Println(fmt.Sprintf("%+v", wc.AppletWechat), "-----------")
 }
 func wechatRefundQuery(ipay pay.IPAY) {
 	request := pay.RefundQueryRequest{

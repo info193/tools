@@ -16,6 +16,11 @@ func PercentageRate(discount float32) float64 {
 	dBase := decimal.NewFromFloat32(100)
 	return dDiscount.Div(dBase).InexactFloat64()
 }
+func PercentageRateFloat64(discount float64) float64 {
+	dDiscount := decimal.NewFromFloat(discount)
+	dBase := decimal.NewFromFloat(100)
+	return dDiscount.Div(dBase).InexactFloat64()
+}
 
 // 百分比率 90.50 转换成 9.05折
 func PercentageDiscount(discount float32) string {
@@ -42,6 +47,13 @@ func DiscountRateFloat(discount float64) float64 {
 // 分成金额
 func DivideIntoFloat(price float64, discount float32) float64 {
 	rate := decimal.NewFromFloat(PercentageRate(discount))
+	priceFloat := decimal.NewFromFloat(price)
+	return priceFloat.Mul(rate).InexactFloat64()
+}
+
+// 分成金额
+func DivideIntoFloat64(price float64, discount float64) float64 {
+	rate := decimal.NewFromFloat(PercentageRateFloat64(discount))
 	priceFloat := decimal.NewFromFloat(price)
 	return priceFloat.Mul(rate).InexactFloat64()
 }
