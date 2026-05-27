@@ -13,38 +13,52 @@ import (
 
 // 定义RabbitMQ对象
 type RabbitMQ struct {
-	Cfg       *RabbitMqConfig            // 配置
-	Consumers map[*BusinessConfig]Handle // 消费者
-	Lock      sync.Mutex                 // 锁
-	retryCnfs map[int]int64
-	retryNum  int
-	done      chan struct{} // 优雅退出信号
-
-	// 单例连接
-	conn *amqp.Connection
-	mu   sync.Mutex
+	Cfg        *RabbitMqConfig // 配置
+	connection *amqp.Connection
+	Channel    *amqp.Channel
+	Consumers  map[*BusinessConfig]Handle // 消费者
+	Lock       sync.Mutex                 // 锁
+	retryCnfs  map[int]int64
+	retryNum   int
 }
 
-// getConnection 获取单例连接，断线自动重建
-func (r *RabbitMQ) getConnection() (*amqp.Connection, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if r.conn != nil && !r.conn.IsClosed() {
-		return r.conn, nil
-	}
-
-	if r.conn != nil {
-		r.conn.Close()
-	}
-
-	conn, err := amqp.DialConfig(r.Cfg.Dns, amqp.Config{Vhost: r.Cfg.Vhost, Heartbeat: time.Duration(r.Cfg.Heartbeat) * time.Second})
+// 链接rabbitMQ
+func (r *RabbitMQ) MqConnect() (err error) {
+	mqConn, err := amqp.DialConfig(r.Cfg.Dns, amqp.Config{Vhost: r.Cfg.Vhost, Heartbeat: time.Duration(r.Cfg.Heartbeat) * time.Second})
+	//mqConn, err = amqp.Dial(r.dns)
+	r.connection = mqConn // 赋值给RabbitMQ对象
 	if err != nil {
-		log.Printf("rabbitmq 创建连接失败 err=%v", err)
-		return nil, err
+		log.Printf("rabbitmq 创建mq链接失败 err=%v", err)
 	}
-	r.conn = conn
-	return conn, nil
+	return
+}
+
+// 关闭mq链接
+func (r *RabbitMQ) CloseMqConnect() (err error) {
+	err = r.connection.Close()
+	if err != nil {
+		log.Printf("关闭mq链接失败 err=%v", err)
+	}
+	return
+}
+
+// 链接rabbitMQ
+func (r *RabbitMQ) MqOpenChannel() (err error) {
+	mqConn := r.connection
+	r.Channel, err = mqConn.Channel()
+	if err != nil {
+		log.Printf("rabbitmq创建管道失败 err=%v", err)
+	}
+	return err
+}
+
+// 链接rabbitMQ
+func (r *RabbitMQ) CloseMqChannel() (err error) {
+	err = r.Channel.Close()
+	if err != nil {
+		log.Printf("关闭rabbitmq链接失败 err=%v", err)
+	}
+	return err
 }
 
 // 创建一个新的操作对象
@@ -63,34 +77,28 @@ func NewRabbitMQ(cfg *RabbitMqConfig) *RabbitMQ {
 		Lock:      sync.Mutex{},
 		retryCnfs: retryCnfs,
 		retryNum:  len(cfg.RetryCnfs),
-		done:      make(chan struct{}),
 	}
-}
-
-// Close 优雅关闭所有消费者协程和连接
-func (r *RabbitMQ) Close() {
-	close(r.done)
-
-	r.mu.Lock()
-	if r.conn != nil {
-		r.conn.Close()
-		r.conn = nil
-	}
-	r.mu.Unlock()
 }
 
 func (r *RabbitMQ) Publish(b *BusinessConfig, body string) (err error) {
-	conn, err := r.getConnection()
+	// 1.创建mq链接
+	err = r.MqConnect()
 	if err != nil {
-		log.Printf("rabbitmq Publish 链接获取失败 err=%v", err)
 		return err
 	}
-	ch, err := conn.Channel()
+	defer func() {
+		_ = r.CloseMqConnect()
+	}()
+	// 2.创建信道
+	err = r.MqOpenChannel()
+	ch := r.Channel
 	if err != nil {
-		log.Printf("rabbitmq Publish 创建管道失败 err=%v", err)
+		log.Printf("发送消息创建channel信道失败 err=%v", err)
 		return err
 	}
-	defer ch.Close()
+	defer func() {
+		_ = r.Channel.Close()
+	}()
 
 	err = ch.ExchangeDeclare(b.GroupId, b.Topic, true, false, false, false, nil)
 	if err != nil {
@@ -111,7 +119,7 @@ func (r *RabbitMQ) Publish(b *BusinessConfig, body string) (err error) {
 		return err
 	}
 
-	err = ch.Publish("", b.Name, false, false, amqp.Publishing{
+	err = r.Channel.Publish("", b.Name, false, false, amqp.Publishing{
 		ContentType:  "text/plain",
 		Body:         []byte(body),
 		DeliveryMode: amqp.Persistent,
@@ -122,21 +130,26 @@ func (r *RabbitMQ) Publish(b *BusinessConfig, body string) (err error) {
 	}
 
 	return nil
-}
 
+}
 func (r *RabbitMQ) DeferPublish(b *BusinessConfig, body string, t time.Duration) (err error) {
-	conn, err := r.getConnection()
+	// 创建mq链接
+	err = r.MqConnect()
 	if err != nil {
-		log.Printf("rabbitmq DeferPublish 链接获取失败 err=%v", err)
 		return err
 	}
+	defer func() {
+		_ = r.CloseMqConnect()
+	}()
+
 	// 创建信道
-	ch, err := conn.Channel()
+	err = r.MqOpenChannel()
+	ch := r.Channel
 	if err != nil {
-		log.Printf("rabbitmq DeferPublish 创建管道失败 err=%v", err)
+		log.Printf("发送延迟消息创建信道失败 err=%v", err)
 		return err
 	}
-	defer ch.Close()
+	defer r.Channel.Close()
 
 	err = ch.ExchangeDeclare(b.GroupId, b.Topic, true, false, false, false, nil)
 	if err != nil {
@@ -149,6 +162,7 @@ func (r *RabbitMQ) DeferPublish(b *BusinessConfig, body string, t time.Duration)
 		return errors.New("发送延时消息，延迟时间参数是必须的填写")
 	}
 	ttl := t.Milliseconds()
+	//delayQueueName := fmt.Sprintf("enqueue.%s.%v.x.delay", b.Name, ttl)
 	delayQueueName := r.delayQueueName(b.Name, ttl)
 	// 用于检查队列是否存在,已经存在不需要重复声明
 	_, err = ch.QueueDeclare(delayQueueName, true, false, false, false, amqp.Table{
@@ -167,10 +181,10 @@ func (r *RabbitMQ) DeferPublish(b *BusinessConfig, body string, t time.Duration)
 		return err
 	}
 
-	err = ch.Publish("", delayQueueName, false, false, amqp.Publishing{
+	err = r.Channel.Publish("", delayQueueName, false, false, amqp.Publishing{
 		ContentType:  "text/plain",
 		Body:         []byte(body),
-		DeliveryMode: amqp.Persistent,
+		DeliveryMode: amqp.Persistent, //  将消息标记为持久消息
 		Headers:      map[string]interface{}{"retry": 0},
 	})
 	if err != nil {
@@ -308,105 +322,90 @@ func (r *RabbitMQ) delayQueueName(name string, ttl int64) string {
 }
 
 func (r *RabbitMQ) Listen() {
+	var (
+		exitTask bool
+	)
 	if len(r.Consumers) <= 0 {
 		log.Printf("rabbitmq消费者监听成功,共%d个消费者", len(r.Consumers))
 		return
 	}
 
+	//链接rabbitMQ
+	err := r.MqConnect()
+	if err != nil {
+		return
+	}
+
 	defer func() {
 		if panicErr := recover(); panicErr != nil {
-			log.Printf("rabbitmq listener panic err=%v", panicErr)
+			fmt.Println(recover())
+			err = errors.New(fmt.Sprintf("%s", panicErr))
 		}
 	}()
 
-	var wg sync.WaitGroup
+	//开始执行任务
 	for business, handle := range r.Consumers {
 		b := *business
 		h := handle
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			r.consumeWithReconnect(&b, h)
-		}()
+		go r.do(&b, h)
 	}
 
-	// 阻塞等待退出信号
-	<-r.done
-	log.Printf("rabbitmq 收到退出信号，等待消费者协程退出...")
-	wg.Wait()
-	log.Printf("rabbitmq 所有消费者协程已退出")
+	scheduleTimer := time.NewTimer(time.Millisecond * 300)
+	exitTask = true
+	for {
+		select {
+		case <-scheduleTimer.C:
+			//fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~")
+		}
+		// 重置调度间隔
+		scheduleTimer.Reset(time.Millisecond * 300)
+		if !exitTask {
+			break
+		}
+	}
+	fmt.Println("exit")
+	return
 }
-
 func (r *RabbitMQ) Register(b *BusinessConfig, handle Handle) {
 	r.Lock.Lock()
 	defer r.Lock.Unlock()
 	r.Consumers[b] = handle
 }
 
-// consumeWithReconnect 带重连机制的消费者，从单例连接创建独立channel
-func (r *RabbitMQ) consumeWithReconnect(b *BusinessConfig, handle Handle) {
-	for {
-		// 检查是否收到退出信号
-		select {
-		case <-r.done:
-			return // 收到信号，直接退出
-		default:
-		}
-		// 获取mq 连接
-		conn, err := r.getConnection()
-		if err != nil {
-			log.Printf("消费者[%s]获取连接失败，3秒后重试 err=%v", b.Name, err)
-			r.waitOrDone(3 * time.Second)
-			continue
-		}
-
-		r.receiver(conn, b, handle)
-
-		select {
-		case <-r.done:
-			return
-		default:
-			log.Printf("消费者[%s]channel断开，3秒后重连", b.Name)
-			r.waitOrDone(3 * time.Second)
-		}
-	}
-}
-
-// receiver 消费消息，从共享连接创建独立channel
-func (r *RabbitMQ) receiver(conn *amqp.Connection, b *BusinessConfig, handle Handle) {
-	ch, err := conn.Channel()
+// 监听接收者接收任务
+func (r *RabbitMQ) Receiver(b *BusinessConfig, handle Handle) {
+	err := r.MqOpenChannel()
+	ch := r.Channel
 	if err != nil {
-		log.Printf("消费者[%s]创建信道失败 err=%v", b.Name, err)
+		log.Printf("消费者创建信道失败 err=%v", err)
 		return
 	}
-	defer ch.Close()
-
+	defer r.Channel.Close()
 	err = ch.ExchangeDeclare(b.GroupId, b.Topic, true, false, false, false, nil)
 	if err != nil {
-		log.Printf("消费者[%s]创建交换机失败 err=%v", b.Name, err)
+		log.Printf("消费者创建交换机失败 err=%v", err)
 		return
 	}
 
 	// 用于检查队列是否存在,已经存在不需要重复声明
 	_, err = ch.QueueDeclare(b.Name, true, false, false, false, nil)
 	if err != nil {
-		log.Printf("消费者[%s]创建队列失败 err=%v", b.Name, err)
+		log.Printf("消费者创建队列失败 err=%v", err)
 		return
 	}
 	// 绑定任务
 	err = ch.QueueBind(b.Name, b.Name, b.GroupId, false, nil)
 	if err != nil {
-		log.Printf("消费者[%s]队列绑定交换机失败 err=%v", b.Name, err)
+		log.Printf("消费者队列绑定交换机失败 err=%v", err)
 		return
 	}
-
+	// 获取消费通道,确保rabbitMQ一个一个发送消息
+	//err = ch.Qos(1, 0, false)
 	msgList, err := ch.Consume(b.Name, "", false, false, false, false, nil)
 	if err != nil {
-		log.Printf("消费者[%s]消费消息失败 err=%v", b.Name, err)
+		log.Printf("消费者消费消息失败 err=%v", err)
 		return
 	}
-
-	log.Printf("消费者[%s]开始消费", b.Name)
 	for msg := range msgList {
 		// 处理数据
 		err := handle(string(msg.Body))
@@ -443,32 +442,33 @@ func (r *RabbitMQ) receiver(conn *amqp.Connection, b *BusinessConfig, handle Han
 				log.Printf("消息消费ack失败 err=%v", err)
 			}
 		}
+
 	}
 }
 
-// waitOrDone 等待指定时间，或收到退出信号时提前返回
-func (r *RabbitMQ) waitOrDone(d time.Duration) {
-	timer := time.NewTimer(d)
-	defer timer.Stop()
-	select {
-	case <-r.done:
-	case <-timer.C:
-	}
-}
-
-// 发送重试消息（复用单例连接）
-func (r *RabbitMQ) publishRetry(body string, retry int, retrySecond int64, b *BusinessConfig) {
-	conn, err := r.getConnection()
+func (r *RabbitMQ) do(b *BusinessConfig, receiver Handle) {
+	// 验证链接是否正常
+	err := r.MqOpenChannel()
 	if err != nil {
-		log.Printf("发送重试消息连接失败 err=%v", err)
 		return
 	}
-	ch, err := conn.Channel()
+	r.Receiver(b, receiver)
+}
+
+// 发送重试消息
+func (r *RabbitMQ) publishRetry(body string, retry int, retrySecond int64, b *BusinessConfig) {
+	_ = r.MqConnect()
+	defer func() {
+		_ = r.CloseMqConnect()
+	}()
+
+	err := r.MqOpenChannel()
+	ch := r.Channel
 	if err != nil {
 		log.Printf("发送重试消息创建信道失败 err=%v", err)
 		return
 	}
-	defer ch.Close()
+	defer r.Channel.Close()
 
 	err = ch.ExchangeDeclare(b.GroupId, b.Topic, true, false, false, false, nil)
 	if err != nil {
@@ -494,9 +494,9 @@ func (r *RabbitMQ) publishRetry(body string, retry int, retrySecond int64, b *Bu
 		log.Printf("发送重试消息队列绑定交换机失败 err=%v", err)
 		return
 	}
-	err = ch.Publish("", retryQueueName, false, false, amqp.Publishing{
+	err = r.Channel.Publish("", retryQueueName, false, false, amqp.Publishing{
 		ContentType:  "text/plain",
-		DeliveryMode: amqp.Persistent,
+		DeliveryMode: amqp.Persistent, //  将消息标记为持久消息
 		Body:         []byte(body),
 		Headers:      map[string]interface{}{"retry": retry},
 	})
@@ -504,4 +504,5 @@ func (r *RabbitMQ) publishRetry(body string, retry int, retrySecond int64, b *Bu
 		log.Printf("发送重试消息失败 err=%v", err)
 		return
 	}
+
 }
