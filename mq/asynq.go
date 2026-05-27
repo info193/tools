@@ -56,6 +56,9 @@ func (a *Asynq) Register(b *BusinessConfig, handle Handle) {
 	a.Consumers[b] = handle
 }
 
+func (a *Asynq) Close() {
+}
+
 func (a *Asynq) Listen() {
 	if len(a.Consumers) == 0 {
 		fmt.Printf("Asynq 消费者注册数量为0,请核查!!!")

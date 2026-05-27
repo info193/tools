@@ -108,6 +108,15 @@ func (n *NSQ) Register(b *BusinessConfig, handle Handle) {
 	n.Consumers[b] = handle
 }
 
+func (n *NSQ) Close() {
+	n.Lock.Lock()
+	defer n.Lock.Unlock()
+	for _, p := range n.p {
+		p.Stop()
+	}
+	n.p = nil
+}
+
 func (n *NSQ) Listen() {
 	if len(n.Consumers) > 0 {
 		for business, handle := range n.Consumers {

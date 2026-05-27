@@ -17,6 +17,8 @@ type IMQ interface {
 	Register(b *BusinessConfig, handle Handle)
 	// Listen 消费者监听
 	Listen()
+	// Close 关闭连接
+	Close()
 }
 
 // MqConfig

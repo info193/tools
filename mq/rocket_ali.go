@@ -77,6 +77,9 @@ func (r *RocketAli) Register(b *BusinessConfig, handle Handle) {
 	r.Consumers[b] = handle
 }
 
+func (r *RocketAli) Close() {
+}
+
 func (r *RocketAli) Listen() {
 	if len(r.Consumers) > 0 {
 		for business, handle := range r.Consumers {
