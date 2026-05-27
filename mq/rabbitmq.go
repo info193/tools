@@ -294,13 +294,13 @@ func (r *RabbitMQ) delayQueueName(name string, ttl int64) string {
 		max = 15552000000
 	}
 	// 180天-360天
-	if ttl <= 15552000000 && ttl > 7776000000 {
-		min = 7776000000
-		max = 15552000000
+	if ttl <= 31104000000 && ttl > 15552000000 {
+		min = 15552000000
+		max = 31104000000
 	}
 	// 360天-无限期
-	if ttl > 15552000000 {
-		min = 15552000000
+	if ttl > 31104000000 {
+		min = 31104000000
 		max = -1
 	}
 
